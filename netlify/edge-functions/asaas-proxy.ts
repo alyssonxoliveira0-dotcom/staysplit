@@ -1,7 +1,6 @@
 import type { Context } from "https://edge.netlify.com";
 
 export default async (request: Request, context: Context) => {
-  // Headers CORS
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -9,56 +8,53 @@ export default async (request: Request, context: Context) => {
     "Content-Type": "application/json",
   };
 
-  // Preflight
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   const url = new URL(request.url);
-
-  // Remove /api do path para montar URL do Asaas
   const asaasPath = url.pathname.replace("/api", "");
-  const apiKey = request.headers.get("access_token") || "";
+
+  // Pega o access_token do header — suporta tanto minúsculo quanto maiúsculo
+  const apiKey =
+    request.headers.get("access_token") ||
+    request.headers.get("Access_token") ||
+    request.headers.get("Access-Token") ||
+    "";
+
   const env = request.headers.get("x-env") || "sandbox";
 
-  const asaasHost =
+  const asaasBase =
     env === "production"
       ? "https://api.asaas.com/v3"
       : "https://sandbox.asaas.com/api/v3";
 
-  const asaasUrl = `${asaasHost}${asaasPath}${url.search}`;
+  const asaasUrl = `${asaasBase}${asaasPath}${url.search}`;
 
-  // Monta headers para o Asaas
-  const asaasHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-    "access_token": apiKey,
-    "User-Agent": "StaySplit/1.0",
-  };
-
-  // Repassa a requisição para o Asaas
-  const body = request.method !== "GET" ? await request.text() : undefined;
+  const body = ["GET", "HEAD"].includes(request.method)
+    ? undefined
+    : await request.text();
 
   try {
     const asaasResponse = await fetch(asaasUrl, {
       method: request.method,
-      headers: asaasHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "access_token": apiKey,
+        "User-Agent": "StaySplit/1.0",
+      },
       body,
     });
 
-    const responseText = await asaasResponse.text();
+    const text = await asaasResponse.text();
 
-    return new Response(responseText, {
+    return new Response(text, {
       status: asaasResponse.status,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
     });
-  } catch (error) {
+  } catch (err) {
     return new Response(
-      JSON.stringify({
-        errors: [{ code: "proxy_error", description: String(error) }],
-      }),
+      JSON.stringify({ errors: [{ code: "proxy_error", description: String(err) }] }),
       { status: 500, headers: corsHeaders }
     );
   }
