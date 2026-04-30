@@ -5,170 +5,151 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StaySplit — Reservas com Comissionamento</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --cream: #F7F3EE;
-    --warm: #EDE6DC;
-    --sand: #D4C9B5;
-    --bark: #8B7355;
-    --earth: #5C4A32;
-    --deep: #2C2118;
-    --accent: #C4622D;
-    --accent-light: #F0D4C4;
-    --success: #2D6A4F;
-    --success-light: #D8F3DC;
-    --gold: #B5860D;
-    --gold-light: #FFF3CD;
-    --white: #FFFFFF;
-    --shadow: 0 2px 20px rgba(44,33,24,0.08);
-    --shadow-lg: 0 8px 40px rgba(44,33,24,0.14);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--deep); min-height: 100vh; }
+:root {
+  --cream: #F7F3EE; --warm: #EDE6DC; --sand: #D4C9B5;
+  --bark: #8B7355; --earth: #5C4A32; --deep: #2C2118;
+  --accent: #C4622D; --accent-light: #F0D4C4;
+  --success: #2D6A4F; --success-light: #D8F3DC;
+  --gold: #B5860D; --gold-light: #FFF3CD;
+  --white: #FFFFFF;
+  --shadow: 0 2px 20px rgba(44,33,24,0.08);
+  --shadow-lg: 0 8px 40px rgba(44,33,24,0.14);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--deep); min-height: 100vh; }
 
-  /* LOGIN */
-  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--deep); position: relative; overflow: hidden; }
-  #login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 20% 50%, rgba(196,98,45,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 30%, rgba(181,134,13,0.12) 0%, transparent 60%); }
-  .login-card { background: var(--white); border-radius: 20px; padding: 52px 48px; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow-lg); }
-  .brand { text-align: center; margin-bottom: 36px; }
-  .brand-icon { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 22px; }
-  .brand h1 { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--deep); letter-spacing: -0.5px; }
-  .brand p { font-size: 13px; color: var(--bark); margin-top: 4px; }
-  .login-note { text-align: center; font-size: 12px; color: var(--bark); margin-top: 20px; line-height: 1.6; }
+/* LOGIN */
+#login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--deep); position: relative; overflow: hidden; }
+#login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 20% 50%, rgba(196,98,45,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 30%, rgba(181,134,13,0.12) 0%, transparent 60%); }
+.login-card { background: var(--white); border-radius: 20px; padding: 52px 48px; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow-lg); }
+.brand { text-align: center; margin-bottom: 36px; }
+.brand-icon { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 22px; }
+.brand h1 { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--deep); }
+.brand p { font-size: 13px; color: var(--bark); margin-top: 4px; }
+.login-note { text-align: center; font-size: 12px; color: var(--bark); margin-top: 20px; line-height: 1.6; }
 
-  /* FORMS */
-  .form-group { margin-bottom: 16px; }
-  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--warm); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--deep); background: var(--cream); transition: border-color .2s, background .2s; outline: none; }
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); background: var(--white); }
-  .form-group textarea { resize: vertical; min-height: 80px; }
+/* FORMS */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--warm); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--deep); background: var(--cream); transition: border-color .2s; outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: var(--accent); background: var(--white); }
 
-  /* BUTTONS */
-  .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
-  .btn-primary { background: var(--accent); color: var(--white); }
-  .btn-primary:hover { background: #a8521f; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(196,98,45,0.3); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-secondary { background: var(--warm); color: var(--earth); border: 1.5px solid var(--sand); }
-  .btn-secondary:hover { background: var(--sand); }
-  .btn-success { background: var(--success); color: var(--white); }
-  .btn-success:hover { background: #1d4d38; }
-  .btn-success:disabled { opacity: .6; cursor: not-allowed; }
+/* BUTTONS */
+.btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.btn-primary { background: var(--accent); color: var(--white); }
+.btn-primary:hover { background: #a8521f; }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+.btn-success { background: var(--success); color: var(--white); }
+.btn-success:hover { background: #1d4d38; }
+.btn-success:disabled { opacity: .6; cursor: not-allowed; }
 
-  /* APP */
-  #app { display: none; min-height: 100vh; }
-  .topbar { background: var(--deep); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-  .topbar-brand { font-family: 'DM Serif Display', serif; color: var(--white); font-size: 20px; letter-spacing: -0.3px; display: flex; align-items: center; gap: 10px; }
-  .topbar-brand span { background: var(--accent); border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-  .topbar-right { display: flex; align-items: center; gap: 16px; }
-  .env-badge { background: var(--gold); color: var(--white); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .06em; }
-  .env-badge.prod { background: var(--success); }
-  .logout-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
-  .logout-btn:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
-  .main-content { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+/* APP */
+#app { display: none; min-height: 100vh; }
+.topbar { background: var(--deep); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.topbar-brand { font-family: 'DM Serif Display', serif; color: var(--white); font-size: 20px; display: flex; align-items: center; gap: 10px; }
+.topbar-brand span { background: var(--accent); border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.env-badge { background: var(--gold); color: var(--white); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
+.env-badge.prod { background: var(--success); }
+.logout-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
+.logout-btn:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
+.main-content { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
 
-  /* TABS */
-  .tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--warm); border-radius: 12px; padding: 4px; width: fit-content; }
-  .tab-btn { padding: 9px 20px; border: none; border-radius: 9px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
-  .tab-btn.active { background: var(--white); color: var(--deep); box-shadow: 0 1px 6px rgba(44,33,24,0.1); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+/* TABS */
+.tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--warm); border-radius: 12px; padding: 4px; width: fit-content; }
+.tab-btn { padding: 9px 20px; border: none; border-radius: 9px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
+.tab-btn.active { background: var(--white); color: var(--deep); box-shadow: 0 1px 6px rgba(44,33,24,0.1); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 
-  /* CARDS */
-  .card { background: var(--white); border-radius: 16px; padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 20px; }
-  .card-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--deep); margin-bottom: 6px; }
-  .card-sub { font-size: 13px; color: var(--bark); margin-bottom: 24px; line-height: 1.5; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  .section-sep { height: 1px; background: var(--warm); margin: 20px 0; }
+/* CARDS */
+.card { background: var(--white); border-radius: 16px; padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--deep); margin-bottom: 6px; }
+.card-sub { font-size: 13px; color: var(--bark); margin-bottom: 24px; line-height: 1.5; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.section-sep { height: 1px; background: var(--warm); margin: 20px 0; }
 
-  /* PAYMENT TYPES */
-  .payment-types { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
-  .pay-type-btn { flex: 1; min-width: 100px; padding: 14px 10px; border: 2px solid var(--warm); border-radius: 12px; background: var(--cream); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; }
-  .pay-type-btn:hover { border-color: var(--sand); }
-  .pay-type-btn.selected { border-color: var(--accent); background: var(--accent-light); }
-  .pay-type-icon { font-size: 22px; display: block; margin-bottom: 6px; }
-  .pay-type-label { font-size: 13px; font-weight: 500; color: var(--deep); }
+/* PAYMENT TYPES */
+.payment-types { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.pay-type-btn { flex: 1; min-width: 100px; padding: 14px 10px; border: 2px solid var(--warm); border-radius: 12px; background: var(--cream); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; }
+.pay-type-btn.selected { border-color: var(--accent); background: var(--accent-light); }
+.pay-type-icon { font-size: 22px; display: block; margin-bottom: 6px; }
+.pay-type-label { font-size: 13px; font-weight: 500; color: var(--deep); }
 
-  /* SPLIT PREVIEW */
-  .split-preview { background: var(--cream); border-radius: 12px; padding: 20px; margin-top: 16px; }
-  .split-preview-title { font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
-  .split-bar-wrap { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
-  .split-bar-voce { background: var(--earth); transition: width .4s; }
-  .split-bar-parceiro { background: var(--accent); transition: width .4s; }
-  .split-legend { display: flex; justify-content: space-between; font-size: 13px; }
-  .split-legend-item { display: flex; align-items: center; gap: 6px; }
-  .split-dot { width: 8px; height: 8px; border-radius: 50%; }
+/* SPLIT PREVIEW */
+.split-preview { background: var(--cream); border-radius: 12px; padding: 20px; margin-top: 16px; }
+.split-preview-title { font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+.split-bar-wrap { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.split-bar-voce { background: var(--earth); transition: width .4s; }
+.split-bar-parceiro { background: var(--accent); transition: width .4s; }
+.split-legend { display: flex; justify-content: space-between; font-size: 13px; }
+.split-legend-item { display: flex; align-items: center; gap: 6px; }
+.split-dot { width: 8px; height: 8px; border-radius: 50%; }
 
-  /* RESULT */
-  .result-box { background: var(--success-light); border: 1.5px solid #95D5B2; border-radius: 14px; padding: 24px 28px; margin-top: 20px; display: none; }
-  .result-box.show { display: block; }
-  .result-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--success); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-  .result-link { background: var(--white); border: 1.5px solid #95D5B2; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-  .result-link-url { font-family: monospace; font-size: 13px; color: var(--success); word-break: break-all; flex: 1; }
-  .copy-btn { background: var(--success); color: var(--white); border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif; transition: background .2s; flex-shrink: 0; }
-  .copy-btn:hover { background: #1d4d38; }
-  .result-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-  .result-detail-item { background: var(--white); border-radius: 10px; padding: 12px 14px; }
-  .result-detail-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
-  .result-detail-value { font-size: 15px; font-weight: 600; color: var(--deep); }
+/* RESULT */
+.result-box { background: var(--success-light); border: 1.5px solid #95D5B2; border-radius: 14px; padding: 24px 28px; margin-top: 20px; display: none; }
+.result-box.show { display: block; }
+.result-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--success); margin-bottom: 16px; }
+.result-link { background: var(--white); border: 1.5px solid #95D5B2; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.result-link-url { font-family: monospace; font-size: 13px; color: var(--success); word-break: break-all; flex: 1; }
+.copy-btn { background: var(--success); color: var(--white); border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; flex-shrink: 0; }
+.result-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.result-detail-item { background: var(--white); border-radius: 10px; padding: 12px 14px; }
+.result-detail-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.result-detail-value { font-size: 15px; font-weight: 600; color: var(--deep); }
+.whatsapp-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: var(--white); border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; margin-top: 12px; width: 100%; }
 
-  /* WHATSAPP BTN */
-  .whatsapp-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: var(--white); border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; transition: background .2s; margin-top: 12px; width: 100%; }
-  .whatsapp-btn:hover { background: #1aab4f; }
+/* HOTEIS */
+.hotel-item { background: var(--cream); border: 1.5px solid var(--warm); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hotel-item-name { font-size: 14px; font-weight: 600; color: var(--deep); }
+.hotel-item-meta { font-size: 12px; color: var(--bark); margin-top: 2px; }
+.hotel-usar-btn { background: var(--accent); color: var(--white); border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.hotel-del-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
 
-  /* CONFIG */
-  .config-saved { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--gold); font-weight: 500; display: none; margin-top: 12px; }
-  .config-saved.show { display: block; }
+/* HISTORICO */
+.historico-empty { text-align: center; padding: 60px 20px; color: var(--bark); }
+.cobranca-item { background: var(--white); border: 1.5px solid var(--warm); border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cob-hotel { font-size: 14px; font-weight: 600; color: var(--deep); }
+.cob-meta { font-size: 12px; color: var(--bark); margin-top: 3px; }
+.cob-valor { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--earth); }
+.cob-status { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
+.status-pending { background: var(--gold-light); color: var(--gold); }
+.cob-link-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.cob-link-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* HISTORICO */
-  .historico-empty { text-align: center; padding: 60px 20px; color: var(--bark); }
-  .historico-empty p { font-size: 14px; margin-top: 8px; }
-  .cobranca-item { background: var(--white); border: 1.5px solid var(--warm); border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .cob-info { flex: 1; }
-  .cob-hotel { font-size: 14px; font-weight: 600; color: var(--deep); }
-  .cob-meta { font-size: 12px; color: var(--bark); margin-top: 3px; }
-  .cob-valor { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--earth); }
-  .cob-status { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .04em; }
-  .status-pending { background: var(--gold-light); color: var(--gold); }
-  .status-received { background: var(--success-light); color: var(--success); }
-  .cob-link-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
-  .cob-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* FINANCEIRO */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--cream); border-radius: 12px; padding: 18px 20px; }
+.stat-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--deep); }
+.stat-sub { font-size: 12px; color: var(--bark); margin-top: 4px; }
 
-  /* HOTEIS SALVOS */
-  .hotel-item { background: var(--cream); border: 1.5px solid var(--warm); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; transition: border-color .2s; }
-  .hotel-item:hover { border-color: var(--accent); }
-  .hotel-item-name { font-size: 14px; font-weight: 600; color: var(--deep); }
-  .hotel-item-meta { font-size: 12px; color: var(--bark); margin-top: 2px; }
-  .hotel-usar-btn { background: var(--accent); color: var(--white); border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
-  .hotel-del-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+/* CONFIG */
+.config-saved { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--gold); font-weight: 500; display: none; margin-top: 12px; }
+.config-saved.show { display: block; }
 
-  /* LOADING */
-  .loading { display: none; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: var(--bark); font-size: 14px; }
-  .loading.show { display: flex; }
-  .spinner { width: 20px; height: 20px; border: 2px solid var(--warm); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* LOADING */
+.loading { display: none; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: var(--bark); font-size: 14px; }
+.loading.show { display: flex; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--warm); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ALERTS */
-  .alert { border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; line-height: 1.5; }
-  .alert.show { display: block; }
-  .alert-error { background: #FEE2E2; border: 1.5px solid #FCA5A5; color: #991B1B; }
-  .alert-info { background: var(--accent-light); border: 1.5px solid #F0A882; color: #7C2D12; }
+/* ALERTS */
+.alert { border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; line-height: 1.5; }
+.alert.show { display: block; }
+.alert-error { background: #FEE2E2; border: 1.5px solid #FCA5A5; color: #991B1B; }
+.alert-info { background: var(--accent-light); border: 1.5px solid #F0A882; color: #7C2D12; }
 
-  /* PAINEL FINANCEIRO */
-  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
-  .stat-card { background: var(--cream); border-radius: 12px; padding: 18px 20px; }
-  .stat-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-  .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--deep); }
-  .stat-sub { font-size: 12px; color: var(--bark); margin-top: 4px; }
-
-  @media (max-width: 600px) {
-    .main-content { padding: 20px 16px; }
-    .card { padding: 20px 18px; }
-    .grid-2, .grid-3 { grid-template-columns: 1fr; }
-    .login-card { padding: 36px 24px; }
-    .topbar { padding: 0 16px; }
-  }
+@media (max-width: 600px) {
+  .main-content { padding: 20px 16px; }
+  .card { padding: 20px 18px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .login-card { padding: 36px 24px; }
+  .topbar { padding: 0 16px; }
+}
 </style>
 </head>
 <body>
@@ -191,14 +172,14 @@
     </div>
     <div class="form-group">
       <label>Chave de API Asaas</label>
-      <input type="password" id="login-apikey" placeholder="$aas_sandbox_..." autocomplete="off">
+      <input type="password" id="login-apikey" placeholder="$aact_..." autocomplete="off">
     </div>
     <div class="form-group">
       <label>Senha de acesso</label>
-      <input type="password" id="login-senha" placeholder="Sua senha do sistema" onkeydown="if(event.key==='Enter') fazerLogin()">
+      <input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter') fazerLogin()">
     </div>
     <button class="btn btn-primary" onclick="fazerLogin()">Entrar no painel</button>
-    <p class="login-note">Sua API Key fica salva localmente no navegador.<br>Nunca é enviada para terceiros.</p>
+    <p class="login-note">Seus dados ficam salvos neste navegador.</p>
   </div>
 </div>
 
@@ -208,7 +189,7 @@
     <div class="topbar-brand"><span>🏨</span> StaySplit</div>
     <div class="topbar-right">
       <span class="env-badge" id="env-badge">Sandbox</span>
-      <button class="logout-btn" onclick="sair()">Sair</button>
+      <button class="logout-btn" onclick="fazerLogout()">Sair</button>
     </div>
   </div>
 
@@ -221,7 +202,7 @@
       <button class="tab-btn" onclick="mudarTab('config')">Configurações</button>
     </div>
 
-    <!-- TAB: NOVA COBRANÇA -->
+    <!-- NOVA COBRANÇA -->
     <div class="tab-panel active" id="tab-nova">
       <div class="card">
         <div class="card-title">Gerar cobrança de reserva</div>
@@ -232,15 +213,14 @@
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Hóspede</p>
         <div class="grid-2">
           <div class="form-group"><label>Nome completo</label><input type="text" id="h-nome" placeholder="Ex: Maria Silva"></div>
-          <div class="form-group"><label>CPF / CNPJ</label><input type="text" id="h-cpf" placeholder="000.000.000-00"></div>
+          <div class="form-group"><label>CPF / CNPJ</label><input type="text" id="h-cpf" placeholder="00000000000"></div>
         </div>
         <div class="grid-2">
-          <div class="form-group"><label>E-mail</label><input type="email" id="h-email" placeholder="hospede@email.com"></div>
-          <div class="form-group"><label>Celular (WhatsApp)</label><input type="text" id="h-fone" placeholder="11 99999-9999"></div>
+          <div class="form-group"><label>E-mail (opcional)</label><input type="email" id="h-email" placeholder="hospede@email.com"></div>
+          <div class="form-group"><label>Celular (opcional)</label><input type="text" id="h-fone" placeholder="11 99999-9999"></div>
         </div>
 
         <div class="section-sep"></div>
-
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Reserva</p>
         <div class="grid-2">
           <div class="form-group"><label>Hotel / Pousada</label><input type="text" id="r-hotel" placeholder="Ex: Pousada Vista Mar"></div>
@@ -253,7 +233,6 @@
         </div>
 
         <div class="section-sep"></div>
-
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Forma de pagamento</p>
         <div class="payment-types">
           <button class="pay-type-btn selected" id="pt-PIX" onclick="selecionarPagamento('PIX')"><span class="pay-type-icon">⚡</span><span class="pay-type-label">Pix</span></button>
@@ -264,18 +243,15 @@
         <div id="parcelas-wrap" style="display:none;margin-top:14px">
           <div class="form-group">
             <label>Número de parcelas</label>
-            <select id="r-parcelas" onchange="atualizarPreview()">
-              <option value="1">1x (à vista)</option>
-              <option value="2">2x</option><option value="3">3x</option>
-              <option value="4">4x</option><option value="5">5x</option>
-              <option value="6">6x</option><option value="10" selected>10x</option>
-              <option value="12">12x</option>
+            <select id="r-parcelas">
+              <option value="1">1x</option><option value="2">2x</option><option value="3">3x</option>
+              <option value="4">4x</option><option value="5">5x</option><option value="6">6x</option>
+              <option value="10" selected>10x</option><option value="12">12x</option>
             </select>
           </div>
         </div>
 
         <div class="section-sep"></div>
-
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Comissionamento</p>
         <div class="grid-2">
           <div class="form-group"><label>WalletId do parceiro</label><input type="text" id="r-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" oninput="atualizarPreview()"></div>
@@ -295,33 +271,31 @@
           <p style="font-size:11px;color:var(--bark);margin-top:10px">* Estimativa antes da dedução das taxas Asaas</p>
         </div>
 
-        <div class="loading" id="loading-nova"><div class="spinner"></div> Criando cobrança na Asaas...</div>
-        <button class="btn btn-success" onclick="gerarCobranca()" style="margin-top:20px">Gerar link de pagamento</button>
+        <div class="loading" id="loading-nova"><div class="spinner"></div> Criando cobrança...</div>
+        <button class="btn btn-success" id="btn-gerar" onclick="gerarCobranca()" style="margin-top:20px">Gerar link de pagamento</button>
       </div>
 
       <div class="result-box" id="result-box">
         <div class="result-title">✅ Link gerado com sucesso!</div>
         <div class="result-link">
           <span class="result-link-url" id="result-url"></span>
-          <button class="copy-btn" onclick="copiarLink()">Copiar link</button>
+          <button class="copy-btn" onclick="copiarLink()">Copiar</button>
         </div>
         <div class="result-details">
-          <div class="result-detail-item"><div class="result-detail-label">Valor total</div><div class="result-detail-value" id="result-valor"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">Valor</div><div class="result-detail-value" id="result-valor"></div></div>
           <div class="result-detail-item"><div class="result-detail-label">Pagamento</div><div class="result-detail-value" id="result-tipo"></div></div>
-          <div class="result-detail-item"><div class="result-detail-label">Comissão parceiro</div><div class="result-detail-value" id="result-comissao"></div></div>
-          <div class="result-detail-item"><div class="result-detail-label">ID cobrança</div><div class="result-detail-value" id="result-id" style="font-size:12px;font-family:monospace"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">Comissão</div><div class="result-detail-value" id="result-comissao"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">ID</div><div class="result-detail-value" id="result-id" style="font-size:12px;font-family:monospace"></div></div>
         </div>
-        <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">
-          📱 Enviar link por WhatsApp
-        </a>
+        <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">📱 Enviar por WhatsApp</a>
       </div>
     </div>
 
-    <!-- TAB: HOTÉIS -->
+    <!-- HOTÉIS -->
     <div class="tab-panel" id="tab-hoteis">
       <div class="card">
-        <div class="card-title">Cadastro de hotéis e pousadas</div>
-        <div class="card-sub">Salve os dados dos seus parceiros. Na hora de gerar a cobrança, basta clicar em "Usar" para preencher automaticamente.</div>
+        <div class="card-title">Hotéis e pousadas</div>
+        <div class="card-sub">Cadastre seus parceiros. Clique em "Usar" para preencher a cobrança automaticamente.</div>
         <div class="grid-2">
           <div class="form-group"><label>Nome do hotel / pousada</label><input type="text" id="novo-hotel-nome" placeholder="Ex: Pousada Vista Mar"></div>
           <div class="form-group"><label>WalletId Asaas</label><input type="text" id="novo-hotel-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
@@ -335,44 +309,40 @@
       </div>
     </div>
 
-    <!-- TAB: HISTÓRICO -->
+    <!-- HISTÓRICO -->
     <div class="tab-panel" id="tab-historico">
       <div class="card">
         <div class="card-title">Histórico de cobranças</div>
-        <div class="card-sub">Todas as cobranças geradas, salvas no navegador.</div>
+        <div class="card-sub">Cobranças geradas por esta conta.</div>
         <div id="historico-lista"></div>
       </div>
     </div>
 
-    <!-- TAB: FINANCEIRO -->
+    <!-- FINANCEIRO -->
     <div class="tab-panel" id="tab-financeiro">
       <div class="card">
         <div class="card-title">Painel financeiro</div>
-        <div class="card-sub">Resumo das cobranças geradas neste sistema.</div>
+        <div class="card-sub">Resumo das cobranças desta conta.</div>
         <div class="stat-grid">
-          <div class="stat-card"><div class="stat-label">Total cobranças</div><div class="stat-value" id="fin-total">0</div><div class="stat-sub">cobranças geradas</div></div>
-          <div class="stat-card"><div class="stat-label">Volume total</div><div class="stat-value" id="fin-volume">R$ 0</div><div class="stat-sub">em reservas</div></div>
-          <div class="stat-card"><div class="stat-label">Comissões pagas</div><div class="stat-value" id="fin-comissao">R$ 0</div><div class="stat-sub">para parceiros</div></div>
-          <div class="stat-card"><div class="stat-label">Sua receita</div><div class="stat-value" id="fin-receita">R$ 0</div><div class="stat-sub">estimada líquida</div></div>
+          <div class="stat-card"><div class="stat-label">Total cobranças</div><div class="stat-value" id="fin-total">0</div></div>
+          <div class="stat-card"><div class="stat-label">Volume total</div><div class="stat-value" id="fin-volume">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Comissões pagas</div><div class="stat-value" id="fin-comissao">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Sua receita</div><div class="stat-value" id="fin-receita">R$ 0</div></div>
         </div>
-        <div id="fin-lista"></div>
       </div>
     </div>
 
-    <!-- TAB: CONFIGURAÇÕES -->
+    <!-- CONFIGURAÇÕES -->
     <div class="tab-panel" id="tab-config">
       <div class="card">
-        <div class="card-title">Configurações do sistema</div>
-        <div class="card-sub">Credenciais e padrões salvos no navegador.</div>
-        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Asaas API</p>
-        <div class="form-group"><label>Chave de API</label><input type="password" id="cfg-apikey" placeholder="$aas_sandbox_..."></div>
-        <div class="form-group"><label>Ambiente</label><select id="cfg-env"><option value="sandbox">Sandbox (testes)</option><option value="production">Produção</option></select></div>
+        <div class="card-title">Configurações</div>
+        <div class="card-sub">Credenciais e padrões desta conta.</div>
+        <div class="form-group"><label>Chave de API</label><input type="password" id="cfg-apikey"></div>
+        <div class="form-group"><label>Ambiente</label><select id="cfg-env"><option value="sandbox">Sandbox</option><option value="production">Produção</option></select></div>
         <div class="section-sep"></div>
-        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Parceiro padrão</p>
-        <div class="form-group"><label>WalletId padrão</label><input type="text" id="cfg-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
-        <div class="form-group"><label>Comissão padrão (%)</label><input type="number" id="cfg-comissao" value="10" min="1" max="90" step="0.5"></div>
+        <div class="form-group"><label>WalletId padrão do parceiro</label><input type="text" id="cfg-wallet"></div>
+        <div class="form-group"><label>Comissão padrão (%)</label><input type="number" id="cfg-comissao" value="10"></div>
         <div class="section-sep"></div>
-        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Segurança</p>
         <div class="form-group"><label>Nova senha de acesso</label><input type="password" id="cfg-senha" placeholder="Deixe em branco para manter"></div>
         <button class="btn btn-primary" onclick="salvarConfig()" style="width:auto;padding:12px 28px">Salvar configurações</button>
         <div class="config-saved" id="config-saved">✓ Configurações salvas!</div>
@@ -383,102 +353,102 @@
 </div>
 
 <script>
-// ── ESTADO ────────────────────────────────────────────────────────
-let cfg = { apiKey: '', env: 'sandbox', senha: 'admin123', walletPadrao: '', comissaoPadrao: 10 };
-let historico = [];
-let hoteis = [];
-let pagamentoSelecionado = 'PIX';
+// ═══════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════
+const SENHA_PADRAO = 'admin123';
+let sessao = null; // { apiKey, env }
 
-// ── INIT ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// STORAGE — chave única por API Key
+// ═══════════════════════════════════════════════════════
+function storageKey(tipo, apiKey) {
+  const id = (apiKey || '').replace(/[^a-zA-Z0-9]/g, '').slice(-16) || 'default';
+  return 'ss_' + tipo + '_' + id;
+}
+
+function salvarDados(tipo, dados) {
+  if (!sessao) return;
+  try {
+    localStorage.setItem(storageKey(tipo, sessao.apiKey), JSON.stringify(dados));
+  } catch(e) {}
+}
+
+function carregarDados(tipo, apiKey) {
+  try {
+    const raw = localStorage.getItem(storageKey(tipo, apiKey));
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIGURAÇÕES GLOBAIS (não dependem da sessão)
+// ═══════════════════════════════════════════════════════
+function carregarCfgGlobal() {
+  try {
+    const raw = localStorage.getItem('ss_cfg_global');
+    return raw ? JSON.parse(raw) : { senha: SENHA_PADRAO, walletPadrao: '', comissaoPadrao: 10 };
+  } catch(e) { return { senha: SENHA_PADRAO, walletPadrao: '', comissaoPadrao: 10 }; }
+}
+
+function salvarCfgGlobal(cfg) {
+  localStorage.setItem('ss_cfg_global', JSON.stringify(cfg));
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
 window.onload = () => {
-  // Carrega apenas configurações gerais (sem histórico — histórico é carregado no login)
-  const s = localStorage.getItem('staysplit_cfg');
-  if (s) {
-    const savedCfg = JSON.parse(s);
-    // Mantém senha e padrões mas NÃO restaura apiKey automaticamente
-    cfg.senha = savedCfg.senha || cfg.senha;
-    cfg.comissaoPadrao = savedCfg.comissaoPadrao || cfg.comissaoPadrao;
-    cfg.walletPadrao = savedCfg.walletPadrao || cfg.walletPadrao;
-  }
   const hoje = new Date().toISOString().split('T')[0];
   document.getElementById('r-checkin').min = hoje;
   document.getElementById('r-checkout').min = hoje;
 };
 
-// Função auxiliar para gerar chave do localStorage por conta
-function getStorageKey(tipo, apiKey) {
-  try {
-    return 'staysplit_' + tipo + '_' + btoa(apiKey).slice(0, 16);
-  } catch(e) {
-    return 'staysplit_' + tipo + '_default';
-  }
-}
-
-// ── API CALL — via servidor proxy ─────────────────────────────────
-async function asaasAPI(method, path, body) {
-  // Injeta a apiKey no body para contornar bloqueio de headers customizados no Netlify Edge
-  const payload = body ? { ...body, _apiKey: cfg.apiKey } : { _apiKey: cfg.apiKey };
-  const res = await fetch('/api' + path, {
-    method: method === 'GET' ? 'POST' : method,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-env': cfg.env
-    },
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(extrairErro(data));
-  return data;
-}
-
-// ── LOGIN ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════════
 function fazerLogin() {
-  const apikey = document.getElementById('login-apikey').value.trim();
+  const apiKey = document.getElementById('login-apikey').value.trim();
   const senha = document.getElementById('login-senha').value;
   const env = document.getElementById('login-env').value;
-  const err = document.getElementById('login-error');
-  if (!apikey) { mostrarAlerta(err, 'Informe sua chave de API Asaas.'); return; }
-  if (!senha) { mostrarAlerta(err, 'Informe a senha de acesso.'); return; }
-  if (senha !== cfg.senha) { mostrarAlerta(err, 'Senha incorreta.'); return; }
-  cfg.apiKey = apikey; cfg.env = env;
-  localStorage.setItem('staysplit_cfg', JSON.stringify(cfg));
+  const errEl = document.getElementById('login-error');
+  errEl.classList.remove('show');
 
-  // Carrega histórico e hotéis específicos desta conta
-  historico = [];
-  hoteis = [];
-  try {
-    const savedHist = localStorage.getItem(getStorageKey('hist', apikey));
-    const savedHot  = localStorage.getItem(getStorageKey('hoteis', apikey));
-    if (savedHist) historico = JSON.parse(savedHist);
-    if (savedHot)  hoteis    = JSON.parse(savedHot);
-  } catch(e) { console.log('Erro ao carregar histórico:', e); }
+  if (!apiKey) { mostrarAlerta(errEl, 'Informe sua chave de API Asaas.'); return; }
+  if (!senha) { mostrarAlerta(errEl, 'Informe a senha de acesso.'); return; }
 
+  const cfgGlobal = carregarCfgGlobal();
+  if (senha !== cfgGlobal.senha) { mostrarAlerta(errEl, 'Senha incorreta.'); return; }
+
+  // Inicia sessão
+  sessao = { apiKey, env };
+
+  // Carrega dados desta conta
+  const historico = carregarDados('hist', apiKey) || [];
+  const hoteis = carregarDados('hoteis', apiKey) || [];
+
+  // Atualiza interface
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('env-badge').textContent = env === 'sandbox' ? 'Sandbox' : 'Produção';
   document.getElementById('env-badge').className = 'env-badge' + (env === 'production' ? ' prod' : '');
-  document.getElementById('cfg-apikey').value = apikey;
+
+  // Preenche configurações
+  document.getElementById('cfg-apikey').value = apiKey;
   document.getElementById('cfg-env').value = env;
-  document.getElementById('cfg-comissao').value = cfg.comissaoPadrao;
-  document.getElementById('cfg-wallet').value = cfg.walletPadrao || '';
-  if (cfg.walletPadrao) document.getElementById('r-wallet').value = cfg.walletPadrao;
-  document.getElementById('r-comissao').value = cfg.comissaoPadrao;
-  err.classList.remove('show');
-  renderHoteis(); renderHistorico(); renderFinanceiro();
+  document.getElementById('cfg-comissao').value = cfgGlobal.comissaoPadrao;
+  document.getElementById('cfg-wallet').value = cfgGlobal.walletPadrao || '';
+  if (cfgGlobal.walletPadrao) document.getElementById('r-wallet').value = cfgGlobal.walletPadrao;
+  document.getElementById('r-comissao').value = cfgGlobal.comissaoPadrao;
+
+  // Renderiza dados carregados
+  renderHistorico(historico);
+  renderHoteis(hoteis);
+  renderFinanceiro(historico);
 }
 
-function sair() {
-  // Salva histórico e hotéis antes de sair (mantém no localStorage)
-  try {
-    localStorage.setItem(getStorageKey('hist', cfg.apiKey), JSON.stringify(historico));
-    localStorage.setItem(getStorageKey('hoteis', cfg.apiKey), JSON.stringify(hoteis));
-  } catch(e) { console.log('Erro ao salvar histórico:', e); }
-
-  // Limpa apenas a memória — dados ficam salvos no navegador
-  historico = [];
-  hoteis = [];
-  cfg.apiKey = '';
-
+function fazerLogout() {
+  sessao = null;
   // Limpa campos da tela
   ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor','r-wallet'].forEach(id => {
     const el = document.getElementById(id);
@@ -486,23 +456,56 @@ function sair() {
   });
   document.getElementById('result-box').classList.remove('show');
   document.getElementById('nova-error').classList.remove('show');
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('nova-info').classList.remove('show');
   document.getElementById('login-apikey').value = '';
   document.getElementById('login-senha').value = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  // Reset tabs
+  mudarTab('nova');
 }
 
-// ── TABS ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// API CALL
+// ═══════════════════════════════════════════════════════
+async function asaasAPI(method, path, body) {
+  const res = await fetch('/api' + path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'access_token': sessao.apiKey,
+      'x-env': sessao.env
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch(e) { throw new Error('Resposta inválida: ' + text.slice(0,100)); }
+  if (!res.ok) throw new Error(extrairErro(data));
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
 function mudarTab(id) {
   const ids = ['nova','hoteis','historico','financeiro','config'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ids[i]===id));
-  ids.forEach(i => { const p = document.getElementById('tab-'+i); if(p) p.classList.toggle('active', i===id); });
-  if (id==='historico') renderHistorico();
-  if (id==='financeiro') renderFinanceiro();
-  if (id==='hoteis') renderHoteis();
+  ids.forEach(i => {
+    const p = document.getElementById('tab-'+i);
+    if (p) p.classList.toggle('active', i===id);
+  });
+  if (!sessao) return;
+  if (id === 'historico') renderHistorico(carregarDados('hist', sessao.apiKey) || []);
+  if (id === 'financeiro') renderFinanceiro(carregarDados('hist', sessao.apiKey) || []);
+  if (id === 'hoteis') renderHoteis(carregarDados('hoteis', sessao.apiKey) || []);
 }
 
-// ── PAGAMENTO ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// PAGAMENTO
+// ═══════════════════════════════════════════════════════
+let pagamentoSelecionado = 'PIX';
 function selecionarPagamento(tipo) {
   pagamentoSelecionado = tipo;
   document.querySelectorAll('.pay-type-btn').forEach(b => b.classList.remove('selected'));
@@ -511,7 +514,9 @@ function selecionarPagamento(tipo) {
   atualizarPreview();
 }
 
-// ── SPLIT PREVIEW ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// SPLIT PREVIEW
+// ═══════════════════════════════════════════════════════
 function atualizarPreview() {
   const valor = parseFloat(document.getElementById('r-valor').value) || 0;
   const pct = parseFloat(document.getElementById('r-comissao').value) || 0;
@@ -519,16 +524,17 @@ function atualizarPreview() {
   const preview = document.getElementById('split-preview');
   if (valor > 0 && pct > 0 && wallet) {
     const parc = valor * pct / 100;
-    const voce = valor - parc;
     preview.style.display = 'block';
     document.getElementById('bar-voce').style.width = (100-pct)+'%';
     document.getElementById('bar-parceiro').style.width = pct+'%';
-    document.getElementById('legend-voce').textContent = fmt(voce);
+    document.getElementById('legend-voce').textContent = fmt(valor - parc);
     document.getElementById('legend-parc').textContent = fmt(parc);
   } else { preview.style.display = 'none'; }
 }
 
-// ── GERAR COBRANÇA ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// GERAR COBRANÇA
+// ═══════════════════════════════════════════════════════
 async function gerarCobranca() {
   const nome = document.getElementById('h-nome').value.trim();
   const cpf = document.getElementById('h-cpf').value.replace(/\D/g,'');
@@ -541,102 +547,116 @@ async function gerarCobranca() {
   const valor = parseFloat(document.getElementById('r-valor').value);
   const wallet = document.getElementById('r-wallet').value.trim();
   const pct = parseFloat(document.getElementById('r-comissao').value);
-  const parcelas = parseInt(document.getElementById('r-parcelas').value);
+  const parcelas = parseInt(document.getElementById('r-parcelas').value) || 1;
+
   const errEl = document.getElementById('nova-error');
   const infoEl = document.getElementById('nova-info');
-  errEl.classList.remove('show'); infoEl.classList.remove('show');
+  errEl.classList.remove('show');
+  infoEl.classList.remove('show');
 
   if (!nome) { mostrarAlerta(errEl,'Informe o nome do hóspede.'); return; }
-  if (!cpf || cpf.length < 11) { mostrarAlerta(errEl,'CPF inválido — informe pelo menos 11 dígitos.'); return; }
-  if (email && !email.includes('@')) { mostrarAlerta(errEl,'E-mail inválido. Ex: nome@gmail.com'); return; }
-  if (!hotel) { mostrarAlerta(errEl,'Informe o nome do hotel ou pousada.'); return; }
-  if (!checkin||!checkout) { mostrarAlerta(errEl,'Informe as datas de check-in e check-out.'); return; }
-  if (!valor||valor<10) { mostrarAlerta(errEl,'Informe o valor total (mínimo R$ 10,00).'); return; }
+  if (!cpf || cpf.length < 11) { mostrarAlerta(errEl,'CPF inválido — informe 11 dígitos.'); return; }
+  if (email && !email.includes('@')) { mostrarAlerta(errEl,'E-mail inválido.'); return; }
+  if (!hotel) { mostrarAlerta(errEl,'Informe o nome do hotel.'); return; }
+  if (!checkin || !checkout) { mostrarAlerta(errEl,'Informe as datas.'); return; }
+  if (!valor || valor < 10) { mostrarAlerta(errEl,'Valor mínimo R$ 10,00.'); return; }
   if (!wallet) { mostrarAlerta(errEl,'Informe o WalletId do parceiro.'); return; }
-  if (!pct||pct<=0||pct>=100) { mostrarAlerta(errEl,'Percentual de comissão inválido (1 a 99).'); return; }
+  if (!pct || pct <= 0 || pct >= 100) { mostrarAlerta(errEl,'Percentual inválido (1 a 99).'); return; }
 
   const loading = document.getElementById('loading-nova');
+  const btnGerar = document.getElementById('btn-gerar');
   loading.classList.add('show');
-  document.querySelector('#tab-nova .btn-success').disabled = true;
+  btnGerar.disabled = true;
 
   try {
-    mostrarAlerta(infoEl,'Criando cadastro do hóspede...');
-    // Monta payload com apenas campos obrigatorios (name + cpfCnpj)
-    // Email e telefone sao opcionais — so envia se preenchidos e validos
-    const clientePayload = { name: nome, cpfCnpj: cpf, notificationDisabled: true };
-    if (email && email.includes('@')) clientePayload.email = email;
-    const foneLimpo = fone.replace(/\D/g,'');
-    if (foneLimpo && foneLimpo.length >= 10) clientePayload.mobilePhone = foneLimpo;
-    const cliente = await asaasAPI('POST', '/customers', clientePayload);
+    mostrarAlerta(infoEl, 'Criando cadastro do hóspede...');
+    const clienteBody = { name: nome, cpfCnpj: cpf, notificationDisabled: true };
+    if (email) clienteBody.email = email;
+    if (fone && fone.length >= 10) clienteBody.mobilePhone = fone;
+    const cliente = await asaasAPI('POST', '/customers', clienteBody);
 
-    const dueDate = new Date(); dueDate.setDate(dueDate.getDate()+1);
+    mostrarAlerta(infoEl, 'Gerando cobrança com split...');
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 1);
     const dueDateStr = dueDate.toISOString().split('T')[0];
-    const descricao = `Reserva ${hotel}${quarto?' — '+quarto:''} | Check-in: ${checkin} | Check-out: ${checkout}`;
 
-    const payload = {
+    const cobBody = {
       customer: cliente.id,
       billingType: pagamentoSelecionado,
-      value: valor, dueDate: dueDateStr,
-      description: descricao,
+      value: valor,
+      dueDate: dueDateStr,
+      description: `Reserva ${hotel}${quarto?' — '+quarto:''} | ${checkin} → ${checkout}`,
       splits: [{ walletId: wallet, percentualValue: pct }]
     };
 
     if (pagamentoSelecionado === 'CREDIT_CARD' && parcelas > 1) {
-      payload.installmentCount = parcelas;
-      payload.installmentValue = parseFloat((valor/parcelas).toFixed(2));
+      cobBody.installmentCount = parcelas;
+      cobBody.installmentValue = parseFloat((valor/parcelas).toFixed(2));
     }
 
-    mostrarAlerta(infoEl,'Gerando cobrança com split...');
-    const cob = await asaasAPI('POST', '/lean/payments', payload);
+    const cob = await asaasAPI('POST', '/lean/payments', cobBody);
 
     infoEl.classList.remove('show');
     loading.classList.remove('show');
+    btnGerar.disabled = false;
 
     const invoiceUrl = cob.invoiceUrl || cob.bankSlipUrl || '';
+
+    // Exibe resultado
     document.getElementById('result-url').textContent = invoiceUrl;
     document.getElementById('result-valor').textContent = fmt(valor);
     document.getElementById('result-tipo').textContent = labelPagamento(pagamentoSelecionado);
-    document.getElementById('result-comissao').textContent = pct+'% → parceiro';
+    document.getElementById('result-comissao').textContent = pct + '% → parceiro';
     document.getElementById('result-id').textContent = cob.id;
     document.getElementById('result-box').classList.add('show');
 
     // WhatsApp
-    const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valor)}`);
     const wfone = fone.replace(/\D/g,'');
+    const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valor)}`);
     document.getElementById('whatsapp-btn').href = `https://wa.me/55${wfone}?text=${msg}`;
 
-    // Histórico
-    const item = { id: cob.id, hotel, quarto, checkin, checkout, hospede: nome, email, fone, valor, pct, wallet, tipo: pagamentoSelecionado, url: invoiceUrl, status: 'PENDING', criadoEm: new Date().toLocaleString('pt-BR') };
-    historico.unshift(item);
-    try { localStorage.setItem(getStorageKey('hist', cfg.apiKey), JSON.stringify(historico.slice(0,50))); } catch(e) {}
+    // SALVA NO HISTÓRICO DESTA CONTA
+    const novoItem = {
+      id: cob.id, hotel, quarto, checkin, checkout,
+      hospede: nome, valor, pct, wallet,
+      tipo: pagamentoSelecionado, url: invoiceUrl,
+      criadoEm: new Date().toLocaleString('pt-BR')
+    };
+    const histAtual = carregarDados('hist', sessao.apiKey) || [];
+    histAtual.unshift(novoItem);
+    salvarDados('hist', histAtual.slice(0, 50));
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
 
   } catch(e) {
     loading.classList.remove('show');
+    btnGerar.disabled = false;
     infoEl.classList.remove('show');
-    mostrarAlerta(errEl, 'Erro: '+e.message);
+    mostrarAlerta(errEl, 'Erro: ' + e.message);
   }
-  document.querySelector('#tab-nova .btn-success').disabled = false;
 }
 
-// ── HOTÉIS ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// HOTÉIS
+// ═══════════════════════════════════════════════════════
 function salvarHotel() {
   const nome = document.getElementById('novo-hotel-nome').value.trim();
   const wallet = document.getElementById('novo-hotel-wallet').value.trim();
-  const comissao = parseFloat(document.getElementById('novo-hotel-comissao').value);
+  const comissao = parseFloat(document.getElementById('novo-hotel-comissao').value) || 10;
   const obs = document.getElementById('novo-hotel-obs').value.trim();
-  if (!nome||!wallet) { alert('Informe o nome e o WalletId do hotel.'); return; }
-  hoteis.unshift({ id: Date.now(), nome, wallet, comissao: comissao||10, obs, criadoEm: new Date().toLocaleDateString('pt-BR') });
-  try { localStorage.setItem(getStorageKey('hoteis', cfg.apiKey), JSON.stringify(hoteis)); } catch(e) {}
-  document.getElementById('novo-hotel-nome').value='';
-  document.getElementById('novo-hotel-wallet').value='';
-  document.getElementById('novo-hotel-obs').value='';
-  renderHoteis();
+  if (!nome || !wallet) { alert('Informe o nome e o WalletId.'); return; }
+  const hoteis = carregarDados('hoteis', sessao.apiKey) || [];
+  hoteis.unshift({ id: Date.now(), nome, wallet, comissao, obs, criadoEm: new Date().toLocaleDateString('pt-BR') });
+  salvarDados('hoteis', hoteis);
+  document.getElementById('novo-hotel-nome').value = '';
+  document.getElementById('novo-hotel-wallet').value = '';
+  document.getElementById('novo-hotel-obs').value = '';
+  renderHoteis(hoteis);
 }
 
 function usarHotel(id) {
-  const h = hoteis.find(x=>x.id===id);
+  const hoteis = carregarDados('hoteis', sessao.apiKey) || [];
+  const h = hoteis.find(x => x.id === id);
   if (!h) return;
   document.getElementById('r-hotel').value = h.nome;
   document.getElementById('r-wallet').value = h.wallet;
@@ -647,21 +667,25 @@ function usarHotel(id) {
 
 function deletarHotel(id) {
   if (!confirm('Remover este parceiro?')) return;
-  hoteis = hoteis.filter(x=>x.id!==id);
-  try { localStorage.setItem(getStorageKey('hoteis', cfg.apiKey), JSON.stringify(hoteis)); } catch(e) {}
-  renderHoteis();
+  let hoteis = carregarDados('hoteis', sessao.apiKey) || [];
+  hoteis = hoteis.filter(x => x.id !== id);
+  salvarDados('hoteis', hoteis);
+  renderHoteis(hoteis);
 }
 
-function renderHoteis() {
+function renderHoteis(hoteis) {
   const el = document.getElementById('hoteis-lista');
-  if (hoteis.length===0) { el.innerHTML='<p style="font-size:13px;color:var(--bark);text-align:center;padding:20px">Nenhum parceiro cadastrado ainda.</p>'; return; }
-  el.innerHTML = hoteis.map(h=>`
+  if (!hoteis || hoteis.length === 0) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--bark);text-align:center;padding:20px">Nenhum parceiro cadastrado.</p>';
+    return;
+  }
+  el.innerHTML = hoteis.map(h => `
     <div class="hotel-item">
       <div>
         <div class="hotel-item-name">${h.nome}</div>
-        <div class="hotel-item-meta">Comissão padrão: ${h.comissao}% ${h.obs?'· '+h.obs:''} · Cadastrado em ${h.criadoEm}</div>
+        <div class="hotel-item-meta">Comissão: ${h.comissao}%${h.obs?' · '+h.obs:''} · ${h.criadoEm}</div>
       </div>
-      <div style="display:flex;gap:8px;flex-shrink:0">
+      <div style="display:flex;gap:8px">
         <button class="hotel-usar-btn" onclick="usarHotel(${h.id})">Usar</button>
         <button class="hotel-del-btn" onclick="deletarHotel(${h.id})">✕</button>
       </div>
@@ -669,89 +693,98 @@ function renderHoteis() {
   `).join('');
 }
 
-// ── HISTÓRICO ─────────────────────────────────────────────────────
-function renderHistorico() {
+// ═══════════════════════════════════════════════════════
+// HISTÓRICO
+// ═══════════════════════════════════════════════════════
+function renderHistorico(historico) {
   const el = document.getElementById('historico-lista');
-  if (historico.length===0) { el.innerHTML='<div class="historico-empty"><div style="font-size:36px">🏨</div><p>Nenhuma cobrança gerada ainda.</p></div>'; return; }
-  el.innerHTML = historico.map(h=>`
+  if (!historico || historico.length === 0) {
+    el.innerHTML = '<div class="historico-empty"><div style="font-size:36px">🏨</div><p style="margin-top:8px;font-size:14px">Nenhuma cobrança gerada ainda.</p></div>';
+    return;
+  }
+  el.innerHTML = historico.map(h => `
     <div class="cobranca-item">
-      <div class="cob-info">
+      <div style="flex:1">
         <div class="cob-hotel">${h.hotel}${h.quarto?' — '+h.quarto:''}</div>
-        <div class="cob-meta">${h.hospede} · ${h.checkin} → ${h.checkout} · Comissão: ${h.pct}% · ${h.criadoEm}</div>
+        <div class="cob-meta">${h.hospede} · ${h.checkin} → ${h.checkout} · ${h.pct}% comissão · ${h.criadoEm}</div>
       </div>
       <div class="cob-valor">${fmt(h.valor)}</div>
-      <span class="cob-status status-${h.status.toLowerCase()}">${h.status==='PENDING'?'Aguardando':'Pago'}</span>
+      <span class="cob-status status-pending">Aguardando</span>
       <button class="cob-link-btn" onclick="window.open('${h.url}','_blank')">Abrir link</button>
     </div>
   `).join('');
 }
 
-// ── FINANCEIRO ────────────────────────────────────────────────────
-function renderFinanceiro() {
-  const total = historico.length;
-  const volume = historico.reduce((s,h)=>s+h.valor,0);
-  const comissoes = historico.reduce((s,h)=>s+(h.valor*h.pct/100),0);
-  const receita = volume - comissoes;
-  document.getElementById('fin-total').textContent = total;
+// ═══════════════════════════════════════════════════════
+// FINANCEIRO
+// ═══════════════════════════════════════════════════════
+function renderFinanceiro(historico) {
+  const h = historico || [];
+  const volume = h.reduce((s,x) => s+x.valor, 0);
+  const comissoes = h.reduce((s,x) => s+(x.valor*x.pct/100), 0);
+  document.getElementById('fin-total').textContent = h.length;
   document.getElementById('fin-volume').textContent = fmt(volume);
   document.getElementById('fin-comissao').textContent = fmt(comissoes);
-  document.getElementById('fin-receita').textContent = fmt(receita);
-  const el = document.getElementById('fin-lista');
-  if (historico.length===0) { el.innerHTML=''; return; }
-  el.innerHTML = `<div class="section-sep"></div><p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Últimas cobranças</p>`+
-  historico.slice(0,10).map(h=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--warm);font-size:13px;gap:12px;flex-wrap:wrap">
-      <span style="color:var(--deep);font-weight:500">${h.hotel}</span>
-      <span style="color:var(--bark)">${h.hospede}</span>
-      <span style="color:var(--bark)">${h.criadoEm}</span>
-      <span style="color:var(--accent)">-${fmt(h.valor*h.pct/100)} (${h.pct}%)</span>
-      <span style="color:var(--earth);font-weight:600">${fmt(h.valor)}</span>
-    </div>
-  `).join('');
+  document.getElementById('fin-receita').textContent = fmt(volume - comissoes);
 }
 
-// ── CONFIGURAÇÕES ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// CONFIGURAÇÕES
+// ═══════════════════════════════════════════════════════
 function salvarConfig() {
   const apiKey = document.getElementById('cfg-apikey').value.trim();
   const env = document.getElementById('cfg-env').value;
   const wallet = document.getElementById('cfg-wallet').value.trim();
-  const comissao = parseFloat(document.getElementById('cfg-comissao').value);
+  const comissao = parseFloat(document.getElementById('cfg-comissao').value) || 10;
   const senha = document.getElementById('cfg-senha').value;
-  if (apiKey) cfg.apiKey = apiKey;
-  cfg.env = env; cfg.walletPadrao = wallet; cfg.comissaoPadrao = comissao||10;
-  if (senha) cfg.senha = senha;
-  localStorage.setItem('staysplit_cfg', JSON.stringify(cfg));
-  document.getElementById('env-badge').textContent = env==='sandbox'?'Sandbox':'Produção';
-  document.getElementById('env-badge').className = 'env-badge'+(env==='production'?' prod':'');
+
+  const cfgGlobal = carregarCfgGlobal();
+  cfgGlobal.walletPadrao = wallet;
+  cfgGlobal.comissaoPadrao = comissao;
+  if (senha) cfgGlobal.senha = senha;
+  salvarCfgGlobal(cfgGlobal);
+
+  if (sessao) {
+    if (apiKey) sessao.apiKey = apiKey;
+    sessao.env = env;
+  }
+
+  document.getElementById('env-badge').textContent = env === 'sandbox' ? 'Sandbox' : 'Produção';
+  document.getElementById('env-badge').className = 'env-badge' + (env === 'production' ? ' prod' : '');
   if (wallet) document.getElementById('r-wallet').value = wallet;
   document.getElementById('r-comissao').value = comissao;
   document.getElementById('cfg-senha').value = '';
+
   const saved = document.getElementById('config-saved');
   saved.classList.add('show');
-  setTimeout(()=>saved.classList.remove('show'),3000);
+  setTimeout(() => saved.classList.remove('show'), 3000);
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────
-function fmt(v) { return 'R$ '+(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function fmt(v) {
+  return 'R$ ' + (v||0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
 
 function copiarLink() {
-  navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(()=>{
+  navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(() => {
     const btn = document.querySelector('.copy-btn');
     btn.textContent = '✓ Copiado!';
-    setTimeout(()=>btn.textContent='Copiar link',2000);
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
   });
 }
 
-function mostrarAlerta(el,msg) { el.textContent=msg; el.classList.add('show'); }
+function mostrarAlerta(el, msg) { el.textContent = msg; el.classList.add('show'); }
 
 function extrairErro(data) {
-  if (data.errors&&data.errors.length) return data.errors.map(e=>e.description).join('. ');
-  if (data.message) return data.message;
+  if (data && data.errors && data.errors.length) return data.errors.map(e => e.description).join('. ');
+  if (data && data.message) return data.message;
   return JSON.stringify(data);
 }
 
 function labelPagamento(tipo) {
-  return {PIX:'Pix',BOLETO:'Boleto',CREDIT_CARD:'Cartão',UNDEFINED:'Livre'}[tipo]||tipo;
+  return { PIX:'Pix', BOLETO:'Boleto', CREDIT_CARD:'Cartão', UNDEFINED:'Livre' }[tipo] || tipo;
 }
 </script>
 </body>
