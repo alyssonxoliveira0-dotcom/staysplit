@@ -469,13 +469,12 @@ function fazerLogout() {
 // API CALL
 // ═══════════════════════════════════════════════════════
 async function asaasAPI(method, path, body) {
-  const res = await fetch('/api' + path, {
+  // Passa token e env via query params para contornar bloqueio de headers no Netlify Edge
+  const sep = path.includes('?') ? '&' : '?';
+  const url = '/api' + path + sep + '_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
+  const res = await fetch(url, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      'access_token': sessao.apiKey,
-      'x-env': sessao.env
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   });
   const text = await res.text();
