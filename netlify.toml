@@ -1,8 +1,7 @@
 [build]
   publish = "."
-  functions = "netlify/functions"
+  edge_functions = "netlify/edge-functions"
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/asaas/:splat"
-  status = 200
+[[edge_functions]]
+  path = "/api/*"
+  function = "asaas-proxy"
