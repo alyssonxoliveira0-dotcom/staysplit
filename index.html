@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StaySplit — Reservas com Comissionamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F3EE;
+    --warm: #EDE6DC;
+    --sand: #D4C9B5;
+    --bark: #8B7355;
+    --earth: #5C4A32;
+    --deep: #2C2118;
+    --accent: #C4622D;
+    --accent-light: #F0D4C4;
+    --success: #2D6A4F;
+    --success-light: #D8F3DC;
+    --gold: #B5860D;
+    --gold-light: #FFF3CD;
+    --white: #FFFFFF;
+    --shadow: 0 2px 20px rgba(44,33,24,0.08);
+    --shadow-lg: 0 8px 40px rgba(44,33,24,0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--deep); min-height: 100vh; }
+
+  /* LOGIN */
+  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--deep); position: relative; overflow: hidden; }
+  #login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 20% 50%, rgba(196,98,45,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 30%, rgba(181,134,13,0.12) 0%, transparent 60%); }
+  .login-card { background: var(--white); border-radius: 20px; padding: 52px 48px; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow-lg); }
+  .brand { text-align: center; margin-bottom: 36px; }
+  .brand-icon { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 22px; }
+  .brand h1 { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--deep); letter-spacing: -0.5px; }
+  .brand p { font-size: 13px; color: var(--bark); margin-top: 4px; }
+  .login-note { text-align: center; font-size: 12px; color: var(--bark); margin-top: 20px; line-height: 1.6; }
+
+  /* FORMS */
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--warm); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--deep); background: var(--cream); transition: border-color .2s, background .2s; outline: none; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); background: var(--white); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  /* BUTTONS */
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .btn-primary { background: var(--accent); color: var(--white); }
+  .btn-primary:hover { background: #a8521f; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(196,98,45,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary { background: var(--warm); color: var(--earth); border: 1.5px solid var(--sand); }
+  .btn-secondary:hover { background: var(--sand); }
+  .btn-success { background: var(--success); color: var(--white); }
+  .btn-success:hover { background: #1d4d38; }
+  .btn-success:disabled { opacity: .6; cursor: not-allowed; }
+
+  /* APP */
+  #app { display: none; min-height: 100vh; }
+  .topbar { background: var(--deep); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-brand { font-family: 'DM Serif Display', serif; color: var(--white); font-size: 20px; letter-spacing: -0.3px; display: flex; align-items: center; gap: 10px; }
+  .topbar-brand span { background: var(--accent); border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .env-badge { background: var(--gold); color: var(--white); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .06em; }
+  .env-badge.prod { background: var(--success); }
+  .logout-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
+  .logout-btn:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
+  .main-content { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--warm); border-radius: 12px; padding: 4px; width: fit-content; }
+  .tab-btn { padding: 9px 20px; border: none; border-radius: 9px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
+  .tab-btn.active { background: var(--white); color: var(--deep); box-shadow: 0 1px 6px rgba(44,33,24,0.1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--white); border-radius: 16px; padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 20px; }
+  .card-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--deep); margin-bottom: 6px; }
+  .card-sub { font-size: 13px; color: var(--bark); margin-bottom: 24px; line-height: 1.5; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .section-sep { height: 1px; background: var(--warm); margin: 20px 0; }
+
+  /* PAYMENT TYPES */
+  .payment-types { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .pay-type-btn { flex: 1; min-width: 100px; padding: 14px 10px; border: 2px solid var(--warm); border-radius: 12px; background: var(--cream); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; }
+  .pay-type-btn:hover { border-color: var(--sand); }
+  .pay-type-btn.selected { border-color: var(--accent); background: var(--accent-light); }
+  .pay-type-icon { font-size: 22px; display: block; margin-bottom: 6px; }
+  .pay-type-label { font-size: 13px; font-weight: 500; color: var(--deep); }
+
+  /* SPLIT PREVIEW */
+  .split-preview { background: var(--cream); border-radius: 12px; padding: 20px; margin-top: 16px; }
+  .split-preview-title { font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+  .split-bar-wrap { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+  .split-bar-voce { background: var(--earth); transition: width .4s; }
+  .split-bar-parceiro { background: var(--accent); transition: width .4s; }
+  .split-legend { display: flex; justify-content: space-between; font-size: 13px; }
+  .split-legend-item { display: flex; align-items: center; gap: 6px; }
+  .split-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* RESULT */
+  .result-box { background: var(--success-light); border: 1.5px solid #95D5B2; border-radius: 14px; padding: 24px 28px; margin-top: 20px; display: none; }
+  .result-box.show { display: block; }
+  .result-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--success); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .result-link { background: var(--white); border: 1.5px solid #95D5B2; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .result-link-url { font-family: monospace; font-size: 13px; color: var(--success); word-break: break-all; flex: 1; }
+  .copy-btn { background: var(--success); color: var(--white); border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif; transition: background .2s; flex-shrink: 0; }
+  .copy-btn:hover { background: #1d4d38; }
+  .result-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .result-detail-item { background: var(--white); border-radius: 10px; padding: 12px 14px; }
+  .result-detail-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .result-detail-value { font-size: 15px; font-weight: 600; color: var(--deep); }
+
+  /* WHATSAPP BTN */
+  .whatsapp-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: var(--white); border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; transition: background .2s; margin-top: 12px; width: 100%; }
+  .whatsapp-btn:hover { background: #1aab4f; }
+
+  /* CONFIG */
+  .config-saved { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--gold); font-weight: 500; display: none; margin-top: 12px; }
+  .config-saved.show { display: block; }
+
+  /* HISTORICO */
+  .historico-empty { text-align: center; padding: 60px 20px; color: var(--bark); }
+  .historico-empty p { font-size: 14px; margin-top: 8px; }
+  .cobranca-item { background: var(--white); border: 1.5px solid var(--warm); border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .cob-info { flex: 1; }
+  .cob-hotel { font-size: 14px; font-weight: 600; color: var(--deep); }
+  .cob-meta { font-size: 12px; color: var(--bark); margin-top: 3px; }
+  .cob-valor { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--earth); }
+  .cob-status { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .04em; }
+  .status-pending { background: var(--gold-light); color: var(--gold); }
+  .status-received { background: var(--success-light); color: var(--success); }
+  .cob-link-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
+  .cob-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* HOTEIS SALVOS */
+  .hotel-item { background: var(--cream); border: 1.5px solid var(--warm); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; transition: border-color .2s; }
+  .hotel-item:hover { border-color: var(--accent); }
+  .hotel-item-name { font-size: 14px; font-weight: 600; color: var(--deep); }
+  .hotel-item-meta { font-size: 12px; color: var(--bark); margin-top: 2px; }
+  .hotel-usar-btn { background: var(--accent); color: var(--white); border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+  .hotel-del-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+  /* LOADING */
+  .loading { display: none; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: var(--bark); font-size: 14px; }
+  .loading.show { display: flex; }
+  .spinner { width: 20px; height: 20px; border: 2px solid var(--warm); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ALERTS */
+  .alert { border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; line-height: 1.5; }
+  .alert.show { display: block; }
+  .alert-error { background: #FEE2E2; border: 1.5px solid #FCA5A5; color: #991B1B; }
+  .alert-info { background: var(--accent-light); border: 1.5px solid #F0A882; color: #7C2D12; }
+
+  /* PAINEL FINANCEIRO */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--cream); border-radius: 12px; padding: 18px 20px; }
+  .stat-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--deep); }
+  .stat-sub { font-size: 12px; color: var(--bark); margin-top: 4px; }
+
+  @media (max-width: 600px) {
+    .main-content { padding: 20px 16px; }
+    .card { padding: 20px 18px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .login-card { padding: 36px 24px; }
+    .topbar { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-icon">🏨</div>
+      <h1>StaySplit</h1>
+      <p>Reservas com comissionamento automático</p>
+    </div>
+    <div class="alert alert-error" id="login-error"></div>
+    <div class="form-group">
+      <label>Ambiente</label>
+      <select id="login-env">
+        <option value="sandbox">Sandbox (testes)</option>
+        <option value="production">Produção</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Chave de API Asaas</label>
+      <input type="password" id="login-apikey" placeholder="$aas_sandbox_..." autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Senha de acesso</label>
+      <input type="password" id="login-senha" placeholder="Sua senha do sistema" onkeydown="if(event.key==='Enter') fazerLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="fazerLogin()">Entrar no painel</button>
+    <p class="login-note">Sua API Key fica salva localmente no navegador.<br>Nunca é enviada para terceiros.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand"><span>🏨</span> StaySplit</div>
+    <div class="topbar-right">
+      <span class="env-badge" id="env-badge">Sandbox</span>
+      <button class="logout-btn" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="mudarTab('nova')">Nova cobrança</button>
+      <button class="tab-btn" onclick="mudarTab('hoteis')">Hotéis</button>
+      <button class="tab-btn" onclick="mudarTab('historico')">Histórico</button>
+      <button class="tab-btn" onclick="mudarTab('financeiro')">Financeiro</button>
+      <button class="tab-btn" onclick="mudarTab('config')">Configurações</button>
+    </div>
+
+    <!-- TAB: NOVA COBRANÇA -->
+    <div class="tab-panel active" id="tab-nova">
+      <div class="card">
+        <div class="card-title">Gerar cobrança de reserva</div>
+        <div class="card-sub">Preencha os dados abaixo. O link será enviado ao hóspede para pagamento.</div>
+        <div class="alert alert-error" id="nova-error"></div>
+        <div class="alert alert-info" id="nova-info"></div>
+
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Hóspede</p>
+        <div class="grid-2">
+          <div class="form-group"><label>Nome completo</label><input type="text" id="h-nome" placeholder="Ex: Maria Silva"></div>
+          <div class="form-group"><label>CPF / CNPJ</label><input type="text" id="h-cpf" placeholder="000.000.000-00"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label>E-mail</label><input type="email" id="h-email" placeholder="hospede@email.com"></div>
+          <div class="form-group"><label>Celular (WhatsApp)</label><input type="text" id="h-fone" placeholder="11 99999-9999"></div>
+        </div>
+
+        <div class="section-sep"></div>
+
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Reserva</p>
+        <div class="grid-2">
+          <div class="form-group"><label>Hotel / Pousada</label><input type="text" id="r-hotel" placeholder="Ex: Pousada Vista Mar"></div>
+          <div class="form-group"><label>Tipo de quarto</label><input type="text" id="r-quarto" placeholder="Ex: Suíte Casal"></div>
+        </div>
+        <div class="grid-3">
+          <div class="form-group"><label>Check-in</label><input type="date" id="r-checkin"></div>
+          <div class="form-group"><label>Check-out</label><input type="date" id="r-checkout"></div>
+          <div class="form-group"><label>Valor total (R$)</label><input type="number" id="r-valor" placeholder="1000.00" min="10" step="0.01" oninput="atualizarPreview()"></div>
+        </div>
+
+        <div class="section-sep"></div>
+
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Forma de pagamento</p>
+        <div class="payment-types">
+          <button class="pay-type-btn selected" id="pt-PIX" onclick="selecionarPagamento('PIX')"><span class="pay-type-icon">⚡</span><span class="pay-type-label">Pix</span></button>
+          <button class="pay-type-btn" id="pt-BOLETO" onclick="selecionarPagamento('BOLETO')"><span class="pay-type-icon">📄</span><span class="pay-type-label">Boleto</span></button>
+          <button class="pay-type-btn" id="pt-CREDIT_CARD" onclick="selecionarPagamento('CREDIT_CARD')"><span class="pay-type-icon">💳</span><span class="pay-type-label">Cartão</span></button>
+          <button class="pay-type-btn" id="pt-UNDEFINED" onclick="selecionarPagamento('UNDEFINED')"><span class="pay-type-icon">🔀</span><span class="pay-type-label">Cliente escolhe</span></button>
+        </div>
+        <div id="parcelas-wrap" style="display:none;margin-top:14px">
+          <div class="form-group">
+            <label>Número de parcelas</label>
+            <select id="r-parcelas" onchange="atualizarPreview()">
+              <option value="1">1x (à vista)</option>
+              <option value="2">2x</option><option value="3">3x</option>
+              <option value="4">4x</option><option value="5">5x</option>
+              <option value="6">6x</option><option value="10" selected>10x</option>
+              <option value="12">12x</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-sep"></div>
+
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Comissionamento</p>
+        <div class="grid-2">
+          <div class="form-group"><label>WalletId do parceiro</label><input type="text" id="r-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" oninput="atualizarPreview()"></div>
+          <div class="form-group"><label>Comissão % sobre netValue</label><input type="number" id="r-comissao" value="10" min="1" max="90" step="0.5" oninput="atualizarPreview()"></div>
+        </div>
+
+        <div class="split-preview" id="split-preview" style="display:none">
+          <div class="split-preview-title">Distribuição estimada</div>
+          <div class="split-bar-wrap">
+            <div class="split-bar-voce" id="bar-voce" style="width:90%"></div>
+            <div class="split-bar-parceiro" id="bar-parceiro" style="width:10%"></div>
+          </div>
+          <div class="split-legend">
+            <div class="split-legend-item"><div class="split-dot" style="background:var(--earth)"></div><span style="font-size:13px;color:var(--earth)">Sua conta: <strong id="legend-voce">R$ 0,00</strong></span></div>
+            <div class="split-legend-item"><div class="split-dot" style="background:var(--accent)"></div><span style="font-size:13px;color:var(--accent)">Parceiro: <strong id="legend-parc">R$ 0,00</strong></span></div>
+          </div>
+          <p style="font-size:11px;color:var(--bark);margin-top:10px">* Estimativa antes da dedução das taxas Asaas</p>
+        </div>
+
+        <div class="loading" id="loading-nova"><div class="spinner"></div> Criando cobrança na Asaas...</div>
+        <button class="btn btn-success" onclick="gerarCobranca()" style="margin-top:20px">Gerar link de pagamento</button>
+      </div>
+
+      <div class="result-box" id="result-box">
+        <div class="result-title">✅ Link gerado com sucesso!</div>
+        <div class="result-link">
+          <span class="result-link-url" id="result-url"></span>
+          <button class="copy-btn" onclick="copiarLink()">Copiar link</button>
+        </div>
+        <div class="result-details">
+          <div class="result-detail-item"><div class="result-detail-label">Valor total</div><div class="result-detail-value" id="result-valor"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">Pagamento</div><div class="result-detail-value" id="result-tipo"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">Comissão parceiro</div><div class="result-detail-value" id="result-comissao"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">ID cobrança</div><div class="result-detail-value" id="result-id" style="font-size:12px;font-family:monospace"></div></div>
+        </div>
+        <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">
+          📱 Enviar link por WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <!-- TAB: HOTÉIS -->
+    <div class="tab-panel" id="tab-hoteis">
+      <div class="card">
+        <div class="card-title">Cadastro de hotéis e pousadas</div>
+        <div class="card-sub">Salve os dados dos seus parceiros. Na hora de gerar a cobrança, basta clicar em "Usar" para preencher automaticamente.</div>
+        <div class="grid-2">
+          <div class="form-group"><label>Nome do hotel / pousada</label><input type="text" id="novo-hotel-nome" placeholder="Ex: Pousada Vista Mar"></div>
+          <div class="form-group"><label>WalletId Asaas</label><input type="text" id="novo-hotel-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label>Comissão padrão (%)</label><input type="number" id="novo-hotel-comissao" value="10" min="1" max="90" step="0.5"></div>
+          <div class="form-group"><label>Observação (opcional)</label><input type="text" id="novo-hotel-obs" placeholder="Ex: Temporada alta 15%"></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto;padding:12px 28px" onclick="salvarHotel()">Salvar parceiro</button>
+        <div id="hoteis-lista" style="margin-top:20px"></div>
+      </div>
+    </div>
+
+    <!-- TAB: HISTÓRICO -->
+    <div class="tab-panel" id="tab-historico">
+      <div class="card">
+        <div class="card-title">Histórico de cobranças</div>
+        <div class="card-sub">Todas as cobranças geradas, salvas no navegador.</div>
+        <div id="historico-lista"></div>
+      </div>
+    </div>
+
+    <!-- TAB: FINANCEIRO -->
+    <div class="tab-panel" id="tab-financeiro">
+      <div class="card">
+        <div class="card-title">Painel financeiro</div>
+        <div class="card-sub">Resumo das cobranças geradas neste sistema.</div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-label">Total cobranças</div><div class="stat-value" id="fin-total">0</div><div class="stat-sub">cobranças geradas</div></div>
+          <div class="stat-card"><div class="stat-label">Volume total</div><div class="stat-value" id="fin-volume">R$ 0</div><div class="stat-sub">em reservas</div></div>
+          <div class="stat-card"><div class="stat-label">Comissões pagas</div><div class="stat-value" id="fin-comissao">R$ 0</div><div class="stat-sub">para parceiros</div></div>
+          <div class="stat-card"><div class="stat-label">Sua receita</div><div class="stat-value" id="fin-receita">R$ 0</div><div class="stat-sub">estimada líquida</div></div>
+        </div>
+        <div id="fin-lista"></div>
+      </div>
+    </div>
+
+    <!-- TAB: CONFIGURAÇÕES -->
+    <div class="tab-panel" id="tab-config">
+      <div class="card">
+        <div class="card-title">Configurações do sistema</div>
+        <div class="card-sub">Credenciais e padrões salvos no navegador.</div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Asaas API</p>
+        <div class="form-group"><label>Chave de API</label><input type="password" id="cfg-apikey" placeholder="$aas_sandbox_..."></div>
+        <div class="form-group"><label>Ambiente</label><select id="cfg-env"><option value="sandbox">Sandbox (testes)</option><option value="production">Produção</option></select></div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Parceiro padrão</p>
+        <div class="form-group"><label>WalletId padrão</label><input type="text" id="cfg-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        <div class="form-group"><label>Comissão padrão (%)</label><input type="number" id="cfg-comissao" value="10" min="1" max="90" step="0.5"></div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Segurança</p>
+        <div class="form-group"><label>Nova senha de acesso</label><input type="password" id="cfg-senha" placeholder="Deixe em branco para manter"></div>
+        <button class="btn btn-primary" onclick="salvarConfig()" style="width:auto;padding:12px 28px">Salvar configurações</button>
+        <div class="config-saved" id="config-saved">✓ Configurações salvas!</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── ESTADO ────────────────────────────────────────────────────────
+let cfg = { apiKey: '', env: 'sandbox', senha: 'admin123', walletPadrao: '', comissaoPadrao: 10 };
+let historico = [];
+let hoteis = [];
+let pagamentoSelecionado = 'PIX';
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.onload = () => {
+  const s = localStorage.getItem('staysplit_cfg');
+  if (s) cfg = { ...cfg, ...JSON.parse(s) };
+  const h = localStorage.getItem('staysplit_hist');
+  if (h) historico = JSON.parse(h);
+  const ht = localStorage.getItem('staysplit_hoteis');
+  if (ht) hoteis = JSON.parse(ht);
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('r-checkin').min = hoje;
+  document.getElementById('r-checkout').min = hoje;
+};
+
+// ── API CALL — via servidor proxy ─────────────────────────────────
+async function asaasAPI(method, path, body) {
+  const res = await fetch('/api' + path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'access_token': cfg.apiKey,
+      'x-env': cfg.env
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(extrairErro(data));
+  return data;
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────
+function fazerLogin() {
+  const apikey = document.getElementById('login-apikey').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const env = document.getElementById('login-env').value;
+  const err = document.getElementById('login-error');
+  if (!apikey) { mostrarAlerta(err, 'Informe sua chave de API Asaas.'); return; }
+  if (!senha) { mostrarAlerta(err, 'Informe a senha de acesso.'); return; }
+  if (senha !== cfg.senha) { mostrarAlerta(err, 'Senha incorreta.'); return; }
+  cfg.apiKey = apikey; cfg.env = env;
+  localStorage.setItem('staysplit_cfg', JSON.stringify(cfg));
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('env-badge').textContent = env === 'sandbox' ? 'Sandbox' : 'Produção';
+  document.getElementById('env-badge').className = 'env-badge' + (env === 'production' ? ' prod' : '');
+  document.getElementById('cfg-apikey').value = apikey;
+  document.getElementById('cfg-env').value = env;
+  document.getElementById('cfg-comissao').value = cfg.comissaoPadrao;
+  document.getElementById('cfg-wallet').value = cfg.walletPadrao || '';
+  if (cfg.walletPadrao) document.getElementById('r-wallet').value = cfg.walletPadrao;
+  document.getElementById('r-comissao').value = cfg.comissaoPadrao;
+  err.classList.remove('show');
+  renderHoteis(); renderHistorico(); renderFinanceiro();
+}
+
+function sair() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-apikey').value = '';
+  document.getElementById('login-senha').value = '';
+}
+
+// ── TABS ──────────────────────────────────────────────────────────
+function mudarTab(id) {
+  const ids = ['nova','hoteis','historico','financeiro','config'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ids[i]===id));
+  ids.forEach(i => { const p = document.getElementById('tab-'+i); if(p) p.classList.toggle('active', i===id); });
+  if (id==='historico') renderHistorico();
+  if (id==='financeiro') renderFinanceiro();
+  if (id==='hoteis') renderHoteis();
+}
+
+// ── PAGAMENTO ─────────────────────────────────────────────────────
+function selecionarPagamento(tipo) {
+  pagamentoSelecionado = tipo;
+  document.querySelectorAll('.pay-type-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('pt-'+tipo).classList.add('selected');
+  document.getElementById('parcelas-wrap').style.display = tipo === 'CREDIT_CARD' ? 'block' : 'none';
+  atualizarPreview();
+}
+
+// ── SPLIT PREVIEW ─────────────────────────────────────────────────
+function atualizarPreview() {
+  const valor = parseFloat(document.getElementById('r-valor').value) || 0;
+  const pct = parseFloat(document.getElementById('r-comissao').value) || 0;
+  const wallet = document.getElementById('r-wallet').value.trim();
+  const preview = document.getElementById('split-preview');
+  if (valor > 0 && pct > 0 && wallet) {
+    const parc = valor * pct / 100;
+    const voce = valor - parc;
+    preview.style.display = 'block';
+    document.getElementById('bar-voce').style.width = (100-pct)+'%';
+    document.getElementById('bar-parceiro').style.width = pct+'%';
+    document.getElementById('legend-voce').textContent = fmt(voce);
+    document.getElementById('legend-parc').textContent = fmt(parc);
+  } else { preview.style.display = 'none'; }
+}
+
+// ── GERAR COBRANÇA ────────────────────────────────────────────────
+async function gerarCobranca() {
+  const nome = document.getElementById('h-nome').value.trim();
+  const cpf = document.getElementById('h-cpf').value.replace(/\D/g,'');
+  const email = document.getElementById('h-email').value.trim();
+  const fone = document.getElementById('h-fone').value.replace(/\D/g,'');
+  const hotel = document.getElementById('r-hotel').value.trim();
+  const quarto = document.getElementById('r-quarto').value.trim();
+  const checkin = document.getElementById('r-checkin').value;
+  const checkout = document.getElementById('r-checkout').value;
+  const valor = parseFloat(document.getElementById('r-valor').value);
+  const wallet = document.getElementById('r-wallet').value.trim();
+  const pct = parseFloat(document.getElementById('r-comissao').value);
+  const parcelas = parseInt(document.getElementById('r-parcelas').value);
+  const errEl = document.getElementById('nova-error');
+  const infoEl = document.getElementById('nova-info');
+  errEl.classList.remove('show'); infoEl.classList.remove('show');
+
+  if (!nome) { mostrarAlerta(errEl,'Informe o nome do hóspede.'); return; }
+  if (!cpf || cpf.length < 11) { mostrarAlerta(errEl,'Informe o CPF ou CNPJ válido.'); return; }
+  if (!email) { mostrarAlerta(errEl,'Informe o e-mail do hóspede.'); return; }
+  if (!hotel) { mostrarAlerta(errEl,'Informe o nome do hotel ou pousada.'); return; }
+  if (!checkin||!checkout) { mostrarAlerta(errEl,'Informe as datas de check-in e check-out.'); return; }
+  if (!valor||valor<10) { mostrarAlerta(errEl,'Informe o valor total (mínimo R$ 10,00).'); return; }
+  if (!wallet) { mostrarAlerta(errEl,'Informe o WalletId do parceiro.'); return; }
+  if (!pct||pct<=0||pct>=100) { mostrarAlerta(errEl,'Percentual de comissão inválido (1 a 99).'); return; }
+
+  const loading = document.getElementById('loading-nova');
+  loading.classList.add('show');
+  document.querySelector('#tab-nova .btn-success').disabled = true;
+
+  try {
+    mostrarAlerta(infoEl,'Criando cadastro do hóspede...');
+    const cliente = await asaasAPI('POST', '/customers', {
+      name: nome, email, cpfCnpj: cpf,
+      mobilePhone: fone || undefined,
+      notificationDisabled: false
+    });
+
+    const dueDate = new Date(); dueDate.setDate(dueDate.getDate()+1);
+    const dueDateStr = dueDate.toISOString().split('T')[0];
+    const descricao = `Reserva ${hotel}${quarto?' — '+quarto:''} | Check-in: ${checkin} | Check-out: ${checkout}`;
+
+    const payload = {
+      customer: cliente.id,
+      billingType: pagamentoSelecionado,
+      value: valor, dueDate: dueDateStr,
+      description: descricao,
+      splits: [{ walletId: wallet, percentualValue: pct }]
+    };
+
+    if (pagamentoSelecionado === 'CREDIT_CARD' && parcelas > 1) {
+      payload.installmentCount = parcelas;
+      payload.installmentValue = parseFloat((valor/parcelas).toFixed(2));
+    }
+
+    mostrarAlerta(infoEl,'Gerando cobrança com split...');
+    const cob = await asaasAPI('POST', '/lean/payments', payload);
+
+    infoEl.classList.remove('show');
+    loading.classList.remove('show');
+
+    const invoiceUrl = cob.invoiceUrl || cob.bankSlipUrl || '';
+    document.getElementById('result-url').textContent = invoiceUrl;
+    document.getElementById('result-valor').textContent = fmt(valor);
+    document.getElementById('result-tipo').textContent = labelPagamento(pagamentoSelecionado);
+    document.getElementById('result-comissao').textContent = pct+'% → parceiro';
+    document.getElementById('result-id').textContent = cob.id;
+    document.getElementById('result-box').classList.add('show');
+
+    // WhatsApp
+    const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valor)}`);
+    const wfone = fone.replace(/\D/g,'');
+    document.getElementById('whatsapp-btn').href = `https://wa.me/55${wfone}?text=${msg}`;
+
+    // Histórico
+    const item = { id: cob.id, hotel, quarto, checkin, checkout, hospede: nome, email, fone, valor, pct, wallet, tipo: pagamentoSelecionado, url: invoiceUrl, status: 'PENDING', criadoEm: new Date().toLocaleString('pt-BR') };
+    historico.unshift(item);
+    localStorage.setItem('staysplit_hist', JSON.stringify(historico.slice(0,50)));
+
+    document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+
+  } catch(e) {
+    loading.classList.remove('show');
+    infoEl.classList.remove('show');
+    mostrarAlerta(errEl, 'Erro: '+e.message);
+  }
+  document.querySelector('#tab-nova .btn-success').disabled = false;
+}
+
+// ── HOTÉIS ────────────────────────────────────────────────────────
+function salvarHotel() {
+  const nome = document.getElementById('novo-hotel-nome').value.trim();
+  const wallet = document.getElementById('novo-hotel-wallet').value.trim();
+  const comissao = parseFloat(document.getElementById('novo-hotel-comissao').value);
+  const obs = document.getElementById('novo-hotel-obs').value.trim();
+  if (!nome||!wallet) { alert('Informe o nome e o WalletId do hotel.'); return; }
+  hoteis.unshift({ id: Date.now(), nome, wallet, comissao: comissao||10, obs, criadoEm: new Date().toLocaleDateString('pt-BR') });
+  localStorage.setItem('staysplit_hoteis', JSON.stringify(hoteis));
+  document.getElementById('novo-hotel-nome').value='';
+  document.getElementById('novo-hotel-wallet').value='';
+  document.getElementById('novo-hotel-obs').value='';
+  renderHoteis();
+}
+
+function usarHotel(id) {
+  const h = hoteis.find(x=>x.id===id);
+  if (!h) return;
+  document.getElementById('r-hotel').value = h.nome;
+  document.getElementById('r-wallet').value = h.wallet;
+  document.getElementById('r-comissao').value = h.comissao;
+  atualizarPreview();
+  mudarTab('nova');
+}
+
+function deletarHotel(id) {
+  if (!confirm('Remover este parceiro?')) return;
+  hoteis = hoteis.filter(x=>x.id!==id);
+  localStorage.setItem('staysplit_hoteis', JSON.stringify(hoteis));
+  renderHoteis();
+}
+
+function renderHoteis() {
+  const el = document.getElementById('hoteis-lista');
+  if (hoteis.length===0) { el.innerHTML='<p style="font-size:13px;color:var(--bark);text-align:center;padding:20px">Nenhum parceiro cadastrado ainda.</p>'; return; }
+  el.innerHTML = hoteis.map(h=>`
+    <div class="hotel-item">
+      <div>
+        <div class="hotel-item-name">${h.nome}</div>
+        <div class="hotel-item-meta">Comissão padrão: ${h.comissao}% ${h.obs?'· '+h.obs:''} · Cadastrado em ${h.criadoEm}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="hotel-usar-btn" onclick="usarHotel(${h.id})">Usar</button>
+        <button class="hotel-del-btn" onclick="deletarHotel(${h.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── HISTÓRICO ─────────────────────────────────────────────────────
+function renderHistorico() {
+  const el = document.getElementById('historico-lista');
+  if (historico.length===0) { el.innerHTML='<div class="historico-empty"><div style="font-size:36px">🏨</div><p>Nenhuma cobrança gerada ainda.</p></div>'; return; }
+  el.innerHTML = historico.map(h=>`
+    <div class="cobranca-item">
+      <div class="cob-info">
+        <div class="cob-hotel">${h.hotel}${h.quarto?' — '+h.quarto:''}</div>
+        <div class="cob-meta">${h.hospede} · ${h.checkin} → ${h.checkout} · Comissão: ${h.pct}% · ${h.criadoEm}</div>
+      </div>
+      <div class="cob-valor">${fmt(h.valor)}</div>
+      <span class="cob-status status-${h.status.toLowerCase()}">${h.status==='PENDING'?'Aguardando':'Pago'}</span>
+      <button class="cob-link-btn" onclick="window.open('${h.url}','_blank')">Abrir link</button>
+    </div>
+  `).join('');
+}
+
+// ── FINANCEIRO ────────────────────────────────────────────────────
+function renderFinanceiro() {
+  const total = historico.length;
+  const volume = historico.reduce((s,h)=>s+h.valor,0);
+  const comissoes = historico.reduce((s,h)=>s+(h.valor*h.pct/100),0);
+  const receita = volume - comissoes;
+  document.getElementById('fin-total').textContent = total;
+  document.getElementById('fin-volume').textContent = fmt(volume);
+  document.getElementById('fin-comissao').textContent = fmt(comissoes);
+  document.getElementById('fin-receita').textContent = fmt(receita);
+  const el = document.getElementById('fin-lista');
+  if (historico.length===0) { el.innerHTML=''; return; }
+  el.innerHTML = `<div class="section-sep"></div><p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Últimas cobranças</p>`+
+  historico.slice(0,10).map(h=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--warm);font-size:13px;gap:12px;flex-wrap:wrap">
+      <span style="color:var(--deep);font-weight:500">${h.hotel}</span>
+      <span style="color:var(--bark)">${h.hospede}</span>
+      <span style="color:var(--bark)">${h.criadoEm}</span>
+      <span style="color:var(--accent)">-${fmt(h.valor*h.pct/100)} (${h.pct}%)</span>
+      <span style="color:var(--earth);font-weight:600">${fmt(h.valor)}</span>
+    </div>
+  `).join('');
+}
+
+// ── CONFIGURAÇÕES ─────────────────────────────────────────────────
+function salvarConfig() {
+  const apiKey = document.getElementById('cfg-apikey').value.trim();
+  const env = document.getElementById('cfg-env').value;
+  const wallet = document.getElementById('cfg-wallet').value.trim();
+  const comissao = parseFloat(document.getElementById('cfg-comissao').value);
+  const senha = document.getElementById('cfg-senha').value;
+  if (apiKey) cfg.apiKey = apiKey;
+  cfg.env = env; cfg.walletPadrao = wallet; cfg.comissaoPadrao = comissao||10;
+  if (senha) cfg.senha = senha;
+  localStorage.setItem('staysplit_cfg', JSON.stringify(cfg));
+  document.getElementById('env-badge').textContent = env==='sandbox'?'Sandbox':'Produção';
+  document.getElementById('env-badge').className = 'env-badge'+(env==='production'?' prod':'');
+  if (wallet) document.getElementById('r-wallet').value = wallet;
+  document.getElementById('r-comissao').value = comissao;
+  document.getElementById('cfg-senha').value = '';
+  const saved = document.getElementById('config-saved');
+  saved.classList.add('show');
+  setTimeout(()=>saved.classList.remove('show'),3000);
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function fmt(v) { return 'R$ '+(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+
+function copiarLink() {
+  navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(()=>{
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(()=>btn.textContent='Copiar link',2000);
+  });
+}
+
+function mostrarAlerta(el,msg) { el.textContent=msg; el.classList.add('show'); }
+
+function extrairErro(data) {
+  if (data.errors&&data.errors.length) return data.errors.map(e=>e.description).join('. ');
+  if (data.message) return data.message;
+  return JSON.stringify(data);
+}
+
+function labelPagamento(tipo) {
+  return {PIX:'Pix',BOLETO:'Boleto',CREDIT_CARD:'Cartão',UNDEFINED:'Livre'}[tipo]||tipo;
+}
+</script>
+</body>
+</html>
