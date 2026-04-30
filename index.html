@@ -404,14 +404,15 @@ window.onload = () => {
 
 // ── API CALL — via servidor proxy ─────────────────────────────────
 async function asaasAPI(method, path, body) {
+  // Injeta a apiKey no body para contornar bloqueio de headers customizados no Netlify Edge
+  const payload = body ? { ...body, _apiKey: cfg.apiKey } : { _apiKey: cfg.apiKey };
   const res = await fetch('/api' + path, {
-    method,
+    method: method === 'GET' ? 'POST' : method,
     headers: {
       'Content-Type': 'application/json',
-      'access_token': cfg.apiKey,
       'x-env': cfg.env
     },
-    body: body ? JSON.stringify(body) : undefined
+    body: JSON.stringify(payload)
   });
   const data = await res.json();
   if (!res.ok) throw new Error(extrairErro(data));
@@ -505,8 +506,8 @@ async function gerarCobranca() {
   errEl.classList.remove('show'); infoEl.classList.remove('show');
 
   if (!nome) { mostrarAlerta(errEl,'Informe o nome do hóspede.'); return; }
-  if (!cpf || cpf.length < 11) { mostrarAlerta(errEl,'Informe o CPF ou CNPJ válido.'); return; }
-  if (!email) { mostrarAlerta(errEl,'Informe o e-mail do hóspede.'); return; }
+  if (!cpf || cpf.length < 11) { mostrarAlerta(errEl,'CPF inválido — informe pelo menos 11 dígitos.'); return; }
+  if (email && !email.includes('@')) { mostrarAlerta(errEl,'E-mail inválido. Ex: nome@gmail.com'); return; }
   if (!hotel) { mostrarAlerta(errEl,'Informe o nome do hotel ou pousada.'); return; }
   if (!checkin||!checkout) { mostrarAlerta(errEl,'Informe as datas de check-in e check-out.'); return; }
   if (!valor||valor<10) { mostrarAlerta(errEl,'Informe o valor total (mínimo R$ 10,00).'); return; }
@@ -519,11 +520,13 @@ async function gerarCobranca() {
 
   try {
     mostrarAlerta(infoEl,'Criando cadastro do hóspede...');
-    const cliente = await asaasAPI('POST', '/customers', {
-      name: nome, email, cpfCnpj: cpf,
-      mobilePhone: fone || undefined,
-      notificationDisabled: false
-    });
+    // Monta payload com apenas campos obrigatorios (name + cpfCnpj)
+    // Email e telefone sao opcionais — so envia se preenchidos e validos
+    const clientePayload = { name: nome, cpfCnpj: cpf, notificationDisabled: true };
+    if (email && email.includes('@')) clientePayload.email = email;
+    const foneLimpo = fone.replace(/\D/g,'');
+    if (foneLimpo && foneLimpo.length >= 10) clientePayload.mobilePhone = foneLimpo;
+    const cliente = await asaasAPI('POST', '/customers', clientePayload);
 
     const dueDate = new Date(); dueDate.setDate(dueDate.getDate()+1);
     const dueDateStr = dueDate.toISOString().split('T')[0];
