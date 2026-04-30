@@ -447,11 +447,18 @@ function fazerLogin() {
 }
 
 function sair() {
-  // Limpa todos os dados da sessão atual
+  // Salva histórico e hotéis antes de sair (mantém no localStorage)
+  const histKey = 'staysplit_hist_' + btoa(cfg.apiKey).slice(0,16);
+  const hotKey = 'staysplit_hoteis_' + btoa(cfg.apiKey).slice(0,16);
+  localStorage.setItem(histKey, JSON.stringify(historico));
+  localStorage.setItem(hotKey, JSON.stringify(hoteis));
+
+  // Limpa apenas a memória — dados ficam salvos no navegador
   historico = [];
   hoteis = [];
   cfg.apiKey = '';
-  // Limpa campos da nova cobrança
+
+  // Limpa campos da tela
   ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor','r-wallet'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
