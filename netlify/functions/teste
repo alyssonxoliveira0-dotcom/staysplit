@@ -1,0 +1,120 @@
+// Proxy para a API do Asaas.
+// Recebe requisicoes em /api/* do frontend, escolhe sandbox ou producao
+// pelo header x-env, e repassa para api.asaas.com / api-sandbox.asaas.com.
+
+import type { Context } from "https://edge.netlify.com";
+
+const SANDBOX_BASE = "https://api-sandbox.asaas.com/v3";
+const PRODUCTION_BASE = "https://api.asaas.com/v3";
+
+const ALLOWED_METHODS = new Set([
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "OPTIONS",
+]);
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+export default async (request: Request, _context: Context): Promise<Response> => {
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+        "access-control-allow-headers": "content-type, access_token, x-env",
+        "access-control-max-age": "86400",
+      },
+    });
+  }
+
+  if (!ALLOWED_METHODS.has(request.method)) {
+    return jsonResponse(405, {
+      errors: [{ code: "method_not_allowed", description: "Metodo nao permitido." }],
+    });
+  }
+
+  const url = new URL(request.url);
+  const subpath = url.pathname.replace(/^\/api\/?/, "/");
+  if (subpath === "/" || subpath === "") {
+    return jsonResponse(400, {
+      errors: [{ code: "missing_path", description: "Caminho da API ausente." }],
+    });
+  }
+
+  const accessToken = request.headers.get("access_token");
+  if (!accessToken) {
+    return jsonResponse(401, {
+      errors: [
+        {
+          code: "missing_access_token",
+          description:
+            "Cabecalho access_token ausente. Faca login com sua chave Asaas.",
+        },
+      ],
+    });
+  }
+
+  const env = (request.headers.get("x-env") || "sandbox").toLowerCase();
+  const base = env === "production" ? PRODUCTION_BASE : SANDBOX_BASE;
+  const target = base + subpath + url.search;
+
+  const upstreamHeaders: Record<string, string> = {
+    "content-type": "application/json",
+    "access_token": accessToken,
+    "user-agent": "StaySplit-Netlify-Proxy/1.0",
+    "accept": "application/json",
+  };
+
+  let body: string | undefined;
+  if (request.method !== "GET" && request.method !== "DELETE") {
+    body = await request.text();
+    if (!body) body = undefined;
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: request.method,
+      headers: upstreamHeaders,
+      body,
+    });
+  } catch (err) {
+    return jsonResponse(502, {
+      errors: [
+        {
+          code: "upstream_unreachable",
+          description:
+            "Nao foi possivel contatar a API do Asaas. Tente novamente em instantes.",
+          detail: err instanceof Error ? err.message : String(err),
+        },
+      ],
+    });
+  }
+
+  const text = await upstream.text();
+  // Garante que o cliente sempre receba JSON valido (ate em 204/erros).
+  const safeBody = text && text.length > 0 ? text : "{}";
+
+  return new Response(safeBody, {
+    status: upstream.status,
+    headers: {
+      "content-type":
+        upstream.headers.get("content-type") || "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+};
+
+export const config = { path: "/api/*" };
