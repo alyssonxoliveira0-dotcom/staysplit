@@ -391,18 +391,28 @@ let pagamentoSelecionado = 'PIX';
 
 // ── INIT ──────────────────────────────────────────────────────────
 window.onload = () => {
+  // Carrega apenas configurações gerais (sem histórico — histórico é carregado no login)
   const s = localStorage.getItem('staysplit_cfg');
-  if (s) cfg = { ...cfg, ...JSON.parse(s) };
-  const histKey = 'staysplit_hist_' + btoa(cfg.apiKey).slice(0,16);
-  const hotKey = 'staysplit_hoteis_' + btoa(cfg.apiKey).slice(0,16);
-  const h = localStorage.getItem(histKey);
-  if (h) historico = JSON.parse(h);
-  const ht = localStorage.getItem(hotKey);
-  if (ht) hoteis = JSON.parse(ht);
+  if (s) {
+    const savedCfg = JSON.parse(s);
+    // Mantém senha e padrões mas NÃO restaura apiKey automaticamente
+    cfg.senha = savedCfg.senha || cfg.senha;
+    cfg.comissaoPadrao = savedCfg.comissaoPadrao || cfg.comissaoPadrao;
+    cfg.walletPadrao = savedCfg.walletPadrao || cfg.walletPadrao;
+  }
   const hoje = new Date().toISOString().split('T')[0];
   document.getElementById('r-checkin').min = hoje;
   document.getElementById('r-checkout').min = hoje;
 };
+
+// Função auxiliar para gerar chave do localStorage por conta
+function getStorageKey(tipo, apiKey) {
+  try {
+    return 'staysplit_' + tipo + '_' + btoa(apiKey).slice(0, 16);
+  } catch(e) {
+    return 'staysplit_' + tipo + '_default';
+  }
+}
 
 // ── API CALL — via servidor proxy ─────────────────────────────────
 async function asaasAPI(method, path, body) {
@@ -432,6 +442,17 @@ function fazerLogin() {
   if (senha !== cfg.senha) { mostrarAlerta(err, 'Senha incorreta.'); return; }
   cfg.apiKey = apikey; cfg.env = env;
   localStorage.setItem('staysplit_cfg', JSON.stringify(cfg));
+
+  // Carrega histórico e hotéis específicos desta conta
+  historico = [];
+  hoteis = [];
+  try {
+    const savedHist = localStorage.getItem(getStorageKey('hist', apikey));
+    const savedHot  = localStorage.getItem(getStorageKey('hoteis', apikey));
+    if (savedHist) historico = JSON.parse(savedHist);
+    if (savedHot)  hoteis    = JSON.parse(savedHot);
+  } catch(e) { console.log('Erro ao carregar histórico:', e); }
+
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('env-badge').textContent = env === 'sandbox' ? 'Sandbox' : 'Produção';
@@ -448,10 +469,10 @@ function fazerLogin() {
 
 function sair() {
   // Salva histórico e hotéis antes de sair (mantém no localStorage)
-  const histKey = 'staysplit_hist_' + btoa(cfg.apiKey).slice(0,16);
-  const hotKey = 'staysplit_hoteis_' + btoa(cfg.apiKey).slice(0,16);
-  localStorage.setItem(histKey, JSON.stringify(historico));
-  localStorage.setItem(hotKey, JSON.stringify(hoteis));
+  try {
+    localStorage.setItem(getStorageKey('hist', cfg.apiKey), JSON.stringify(historico));
+    localStorage.setItem(getStorageKey('hoteis', cfg.apiKey), JSON.stringify(hoteis));
+  } catch(e) { console.log('Erro ao salvar histórico:', e); }
 
   // Limpa apenas a memória — dados ficam salvos no navegador
   historico = [];
@@ -587,7 +608,7 @@ async function gerarCobranca() {
     // Histórico
     const item = { id: cob.id, hotel, quarto, checkin, checkout, hospede: nome, email, fone, valor, pct, wallet, tipo: pagamentoSelecionado, url: invoiceUrl, status: 'PENDING', criadoEm: new Date().toLocaleString('pt-BR') };
     historico.unshift(item);
-    localStorage.setItem('staysplit_hist_' + btoa(cfg.apiKey).slice(0,16), JSON.stringify(historico.slice(0,50)));
+    try { localStorage.setItem(getStorageKey('hist', cfg.apiKey), JSON.stringify(historico.slice(0,50))); } catch(e) {}
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
 
@@ -607,7 +628,7 @@ function salvarHotel() {
   const obs = document.getElementById('novo-hotel-obs').value.trim();
   if (!nome||!wallet) { alert('Informe o nome e o WalletId do hotel.'); return; }
   hoteis.unshift({ id: Date.now(), nome, wallet, comissao: comissao||10, obs, criadoEm: new Date().toLocaleDateString('pt-BR') });
-  localStorage.setItem('staysplit_hoteis_' + btoa(cfg.apiKey).slice(0,16), JSON.stringify(hoteis));
+  try { localStorage.setItem(getStorageKey('hoteis', cfg.apiKey), JSON.stringify(hoteis)); } catch(e) {}
   document.getElementById('novo-hotel-nome').value='';
   document.getElementById('novo-hotel-wallet').value='';
   document.getElementById('novo-hotel-obs').value='';
@@ -627,7 +648,7 @@ function usarHotel(id) {
 function deletarHotel(id) {
   if (!confirm('Remover este parceiro?')) return;
   hoteis = hoteis.filter(x=>x.id!==id);
-  localStorage.setItem('staysplit_hoteis_' + btoa(cfg.apiKey).slice(0,16), JSON.stringify(hoteis));
+  try { localStorage.setItem(getStorageKey('hoteis', cfg.apiKey), JSON.stringify(hoteis)); } catch(e) {}
   renderHoteis();
 }
 
