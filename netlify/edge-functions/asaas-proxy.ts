@@ -3,6 +3,7 @@ export default async (request: Request) => {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "*",
+    "Content-Type": "application/json",
   };
 
   if (request.method === "OPTIONS") {
@@ -13,39 +14,23 @@ export default async (request: Request) => {
     const url = new URL(request.url);
     const asaasPath = url.pathname.replace("/api", "");
 
-    // Lê o body uma vez
-    const bodyText = ["GET", "HEAD"].includes(request.method)
-      ? undefined
-      : await request.text();
+    // Pega apiKey e env dos query params (passados pelo frontend)
+    const apiKey = url.searchParams.get("_token") || "";
+    const env = url.searchParams.get("_env") || "sandbox";
 
-    // Tenta pegar o access_token de múltiplas fontes
-    let apiKey = "";
+    // Remove os params internos antes de repassar
+    url.searchParams.delete("_token");
+    url.searchParams.delete("_env");
 
-    // 1. Do header direto
-    for (const [key, value] of request.headers.entries()) {
-      if (key.toLowerCase() === "access_token") {
-        apiKey = value;
-        break;
-      }
-    }
-
-    // 2. Do body JSON se não encontrou no header
-    if (!apiKey && bodyText) {
-      try {
-        const bodyJson = JSON.parse(bodyText);
-        if (bodyJson._apiKey) {
-          apiKey = bodyJson._apiKey;
-          delete bodyJson._apiKey;
-        }
-      } catch {}
-    }
-
-    const env = request.headers.get("x-env") || "sandbox";
     const asaasBase = env === "production"
       ? "https://api.asaas.com/v3"
       : "https://sandbox.asaas.com/api/v3";
 
-    const asaasUrl = `${asaasBase}${asaasPath}${url.search}`;
+    const asaasUrl = `${asaasBase}${asaasPath}${url.search ? url.search : ""}`;
+
+    const bodyText = ["GET", "HEAD"].includes(request.method)
+      ? undefined
+      : await request.text();
 
     const asaasResponse = await fetch(asaasUrl, {
       method: request.method,
@@ -61,15 +46,13 @@ export default async (request: Request) => {
 
     return new Response(responseText, {
       status: asaasResponse.status,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
     });
+
   } catch (err) {
     return new Response(
       JSON.stringify({ errors: [{ code: "proxy_error", description: String(err) }] }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: corsHeaders }
     );
   }
 };
