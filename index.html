@@ -19,6 +19,8 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--deep); min-height: 100vh; }
+
+/* LOGIN */
 #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--deep); position: relative; overflow: hidden; }
 #login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 20% 50%, rgba(196,98,45,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 30%, rgba(181,134,13,0.12) 0%, transparent 60%); }
 .login-card { background: var(--white); border-radius: 20px; padding: 52px 48px; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow-lg); }
@@ -27,10 +29,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .brand h1 { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--deep); }
 .brand p { font-size: 13px; color: var(--bark); margin-top: 4px; }
 .login-note { text-align: center; font-size: 12px; color: var(--bark); margin-top: 20px; line-height: 1.6; }
+
+/* FORMS */
 .form-group { margin-bottom: 16px; }
 .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--warm); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--deep); background: var(--cream); transition: border-color .2s; outline: none; }
 .form-group input:focus, .form-group select:focus { border-color: var(--accent); background: var(--white); }
+
+/* BUTTONS */
 .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
 .btn-primary { background: var(--accent); color: var(--white); }
 .btn-primary:hover { background: #a8521f; }
@@ -38,6 +44,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .btn-success { background: var(--success); color: var(--white); }
 .btn-success:hover { background: #1d4d38; }
 .btn-success:disabled { opacity: .6; cursor: not-allowed; }
+
+/* APP */
 #app { display: none; min-height: 100vh; }
 .topbar { background: var(--deep); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
 .topbar-brand { font-family: 'DM Serif Display', serif; color: var(--white); font-size: 20px; display: flex; align-items: center; gap: 10px; }
@@ -48,22 +56,30 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .logout-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
 .logout-btn:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
 .main-content { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+
+/* TABS */
 .tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--warm); border-radius: 12px; padding: 4px; width: fit-content; }
 .tab-btn { padding: 9px 20px; border: none; border-radius: 9px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
 .tab-btn.active { background: var(--white); color: var(--deep); box-shadow: 0 1px 6px rgba(44,33,24,0.1); }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
+
+/* CARDS */
 .card { background: var(--white); border-radius: 16px; padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 20px; }
 .card-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--deep); margin-bottom: 6px; }
 .card-sub { font-size: 13px; color: var(--bark); margin-bottom: 24px; line-height: 1.5; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .section-sep { height: 1px; background: var(--warm); margin: 20px 0; }
+
+/* PAYMENT TYPES */
 .payment-types { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
 .pay-type-btn { flex: 1; min-width: 100px; padding: 14px 10px; border: 2px solid var(--warm); border-radius: 12px; background: var(--cream); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; }
 .pay-type-btn.selected { border-color: var(--accent); background: var(--accent-light); }
 .pay-type-icon { font-size: 22px; display: block; margin-bottom: 6px; }
 .pay-type-label { font-size: 13px; font-weight: 500; color: var(--deep); }
+
+/* SPLIT PREVIEW */
 .split-preview { background: var(--cream); border-radius: 12px; padding: 20px; margin-top: 16px; }
 .split-preview-title { font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
 .split-bar-wrap { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
@@ -72,6 +88,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .split-legend { display: flex; justify-content: space-between; font-size: 13px; }
 .split-legend-item { display: flex; align-items: center; gap: 6px; }
 .split-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* RESULT */
 .result-box { background: var(--success-light); border: 1.5px solid #95D5B2; border-radius: 14px; padding: 24px 28px; margin-top: 20px; display: none; }
 .result-box.show { display: block; }
 .result-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--success); margin-bottom: 16px; }
@@ -83,11 +101,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .result-detail-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
 .result-detail-value { font-size: 15px; font-weight: 600; color: var(--deep); }
 .whatsapp-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: var(--white); border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; margin-top: 12px; width: 100%; }
+
+/* HOTEIS */
 .hotel-item { background: var(--cream); border: 1.5px solid var(--warm); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .hotel-item-name { font-size: 14px; font-weight: 600; color: var(--deep); }
 .hotel-item-meta { font-size: 12px; color: var(--bark); margin-top: 2px; }
 .hotel-usar-btn { background: var(--accent); color: var(--white); border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .hotel-del-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+/* HISTORICO */
 .historico-empty { text-align: center; padding: 60px 20px; color: var(--bark); }
 .cobranca-item { background: var(--white); border: 1.5px solid var(--warm); border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .cob-hotel { font-size: 14px; font-weight: 600; color: var(--deep); }
@@ -97,21 +119,30 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .status-pending { background: var(--gold-light); color: var(--gold); }
 .cob-link-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .cob-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* FINANCEIRO */
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .stat-card { background: var(--cream); border-radius: 12px; padding: 18px 20px; }
 .stat-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--deep); }
 .stat-sub { font-size: 12px; color: var(--bark); margin-top: 4px; }
+
+/* CONFIG */
 .config-saved { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--gold); font-weight: 500; display: none; margin-top: 12px; }
 .config-saved.show { display: block; }
+
+/* LOADING */
 .loading { display: none; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: var(--bark); font-size: 14px; }
 .loading.show { display: flex; }
 .spinner { width: 20px; height: 20px; border: 2px solid var(--warm); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ALERTS */
 .alert { border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; line-height: 1.5; }
 .alert.show { display: block; }
 .alert-error { background: #FEE2E2; border: 1.5px solid #FCA5A5; color: #991B1B; }
 .alert-info { background: var(--accent-light); border: 1.5px solid #F0A882; color: #7C2D12; }
+
 @media (max-width: 600px) {
   .main-content { padding: 20px 16px; }
   .card { padding: 20px 18px; }
@@ -147,8 +178,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       <label>Senha de acesso</label>
       <input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter') fazerLogin()">
     </div>
-    <button class="btn btn-primary" onclick="fazerLogin()">Entrar no painel</button>
-    <p class="login-note">Seus dados ficam salvos no servidor de forma segura.</p>
+    <button class="btn btn-primary" id="btn-login" onclick="fazerLogin()">Entrar no painel</button>
+    <p class="login-note">Seus dados ficam salvos com segurança na nuvem.</p>
   </div>
 </div>
 
@@ -161,6 +192,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       <button class="logout-btn" onclick="fazerLogout()">Sair</button>
     </div>
   </div>
+
   <div class="main-content">
     <div class="tabs">
       <button class="tab-btn active" onclick="mudarTab('nova')">Nova cobrança</button>
@@ -169,12 +201,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       <button class="tab-btn" onclick="mudarTab('financeiro')">Financeiro</button>
       <button class="tab-btn" onclick="mudarTab('config')">Configurações</button>
     </div>
+
+    <!-- NOVA COBRANÇA -->
     <div class="tab-panel active" id="tab-nova">
       <div class="card">
         <div class="card-title">Gerar cobrança de reserva</div>
         <div class="card-sub">Preencha os dados abaixo. O link será enviado ao hóspede para pagamento.</div>
         <div class="alert alert-error" id="nova-error"></div>
         <div class="alert alert-info" id="nova-info"></div>
+
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Hóspede</p>
         <div class="grid-2">
           <div class="form-group"><label>Nome completo</label><input type="text" id="h-nome" placeholder="Ex: Maria Silva"></div>
@@ -184,6 +219,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
           <div class="form-group"><label>E-mail (opcional)</label><input type="email" id="h-email" placeholder="hospede@email.com"></div>
           <div class="form-group"><label>Celular (opcional)</label><input type="text" id="h-fone" placeholder="11 99999-9999"></div>
         </div>
+
         <div class="section-sep"></div>
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Reserva</p>
         <div class="grid-2">
@@ -195,6 +231,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
           <div class="form-group"><label>Check-out</label><input type="date" id="r-checkout"></div>
           <div class="form-group"><label>Valor total (R$)</label><input type="number" id="r-valor" placeholder="1000.00" min="10" step="0.01" oninput="atualizarPreview()"></div>
         </div>
+
         <div class="section-sep"></div>
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Forma de pagamento</p>
         <div class="payment-types">
@@ -213,12 +250,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
             </select>
           </div>
         </div>
+
         <div class="section-sep"></div>
         <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Comissionamento</p>
         <div class="grid-2">
           <div class="form-group"><label>WalletId do parceiro</label><input type="text" id="r-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" oninput="atualizarPreview()"></div>
           <div class="form-group"><label>Comissão % sobre netValue</label><input type="number" id="r-comissao" value="10" min="1" max="90" step="0.5" oninput="atualizarPreview()"></div>
         </div>
+
         <div class="split-preview" id="split-preview" style="display:none">
           <div class="split-preview-title">Distribuição estimada</div>
           <div class="split-bar-wrap">
@@ -231,9 +270,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
           </div>
           <p style="font-size:11px;color:var(--bark);margin-top:10px">* Estimativa antes da dedução das taxas Asaas</p>
         </div>
+
         <div class="loading" id="loading-nova"><div class="spinner"></div> Criando cobrança...</div>
         <button class="btn btn-success" id="btn-gerar" onclick="gerarCobranca()" style="margin-top:20px">Gerar link de pagamento</button>
       </div>
+
       <div class="result-box" id="result-box">
         <div class="result-title">✅ Link gerado com sucesso!</div>
         <div class="result-link">
@@ -249,6 +290,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">📱 Enviar por WhatsApp</a>
       </div>
     </div>
+
+    <!-- HOTÉIS -->
     <div class="tab-panel" id="tab-hoteis">
       <div class="card">
         <div class="card-title">Hotéis e pousadas</div>
@@ -265,6 +308,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         <div id="hoteis-lista" style="margin-top:20px"></div>
       </div>
     </div>
+
+    <!-- HISTÓRICO -->
     <div class="tab-panel" id="tab-historico">
       <div class="card">
         <div class="card-title">Histórico de cobranças</div>
@@ -272,6 +317,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         <div id="historico-lista"></div>
       </div>
     </div>
+
+    <!-- FINANCEIRO -->
     <div class="tab-panel" id="tab-financeiro">
       <div class="card">
         <div class="card-title">Painel financeiro</div>
@@ -284,6 +331,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         </div>
       </div>
     </div>
+
+    <!-- CONFIGURAÇÕES -->
     <div class="tab-panel" id="tab-config">
       <div class="card">
         <div class="card-title">Configurações</div>
@@ -299,6 +348,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         <div class="config-saved" id="config-saved">✓ Configurações salvas!</div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -307,11 +357,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════════════════
 const SENHA_PADRAO = 'admin123';
-let sessao = null;
+let sessao = null; // { apiKey, env }
 
 // ═══════════════════════════════════════════════════════
-// STORAGE LAYER — Netlify Blobs + localStorage fallback
+// STORAGE — Netlify Blobs (primário) + localStorage (cache/fallback)
 // ═══════════════════════════════════════════════════════
+const STORAGE_URL = '/.netlify/functions/storage';
+
 function storageKey(tipo, apiKey) {
   const id = (apiKey || '').replace(/[^a-zA-Z0-9]/g, '').slice(-16) || 'default';
   return 'ss_' + tipo + '_' + id;
@@ -324,39 +376,39 @@ function localGet(tipo, apiKey) {
   } catch(e) { return null; }
 }
 
-function localSet(tipo, dados) {
-  if (!sessao) return;
-  try { localStorage.setItem(storageKey(tipo, sessao.apiKey), JSON.stringify(dados)); } catch(e) {}
+function localSet(tipo, dados, apiKey) {
+  const key = apiKey || (sessao && sessao.apiKey);
+  if (!key) return;
+  try { localStorage.setItem(storageKey(tipo, key), JSON.stringify(dados)); } catch(e) {}
 }
 
-async function storageGet(tipo) {
-  if (!sessao) return null;
+async function storageGet(tipo, apiKey) {
   try {
-    const url = '/.netlify/functions/storage?_token=' + encodeURIComponent(sessao.apiKey) + '&tipo=' + tipo;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('storage get failed');
-    const data = await res.json();
-    if (data) localSet(tipo, data); // atualiza cache local
-    return data;
-  } catch(e) {
-    return localGet(tipo, sessao.apiKey); // fallback local
-  }
+    const res = await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(apiKey)}&tipo=${tipo}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data !== null) { localSet(tipo, data, apiKey); return data; }
+    }
+  } catch(e) {}
+  const local = localGet(tipo, apiKey);
+  if (local !== null) storageSet(tipo, local).catch(() => {});
+  return local;
 }
 
 async function storageSet(tipo, dados) {
-  localSet(tipo, dados); // grava local imediatamente
+  if (!sessao) return;
+  localSet(tipo, dados, sessao.apiKey);
   try {
-    const url = '/.netlify/functions/storage?_token=' + encodeURIComponent(sessao.apiKey) + '&tipo=' + tipo;
-    await fetch(url, {
+    await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(sessao.apiKey)}&tipo=${tipo}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados)
     });
-  } catch(e) {} // falha silenciosa, local já foi salvo
+  } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════════
-// CONFIGURAÇÕES GLOBAIS
+// CONFIGURAÇÕES GLOBAIS (não dependem da sessão)
 // ═══════════════════════════════════════════════════════
 function carregarCfgGlobal() {
   try {
@@ -394,13 +446,19 @@ async function fazerLogin() {
   const cfgGlobal = carregarCfgGlobal();
   if (senha !== cfgGlobal.senha) { mostrarAlerta(errEl, 'Senha incorreta.'); return; }
 
+  const btnLogin = document.getElementById('btn-login');
+  btnLogin.disabled = true;
+  btnLogin.textContent = 'Carregando...';
+
   sessao = { apiKey, env };
 
-  // Busca dados do servidor (com fallback local)
   const [historico, hoteis] = await Promise.all([
-    storageGet('hist'),
-    storageGet('hoteis')
+    storageGet('hist', apiKey),
+    storageGet('hoteis', apiKey)
   ]);
+
+  btnLogin.disabled = false;
+  btnLogin.textContent = 'Entrar no painel';
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -440,7 +498,7 @@ function fazerLogout() {
 // ═══════════════════════════════════════════════════════
 async function asaasAPI(method, path, body) {
   const sep = path.includes('?') ? '&' : '?';
-  const url = '/api' + path + sep + '_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
+  const url = '/.netlify/functions/asaas' + path + sep + '_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
   const res = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -581,7 +639,6 @@ async function gerarCobranca() {
     const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valor)}`);
     document.getElementById('whatsapp-btn').href = `https://wa.me/55${wfone}?text=${msg}`;
 
-    // Salva no servidor + local
     const novoItem = {
       id: cob.id, hotel, quarto, checkin, checkout,
       hospede: nome, valor, pct, wallet,
@@ -590,8 +647,7 @@ async function gerarCobranca() {
     };
     const histAtual = localGet('hist', sessao.apiKey) || [];
     histAtual.unshift(novoItem);
-    const histSlice = histAtual.slice(0, 50);
-    await storageSet('hist', histSlice);
+    await storageSet('hist', histAtual.slice(0, 50));
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
 
@@ -704,17 +760,24 @@ function salvarConfig() {
   const wallet = document.getElementById('cfg-wallet').value.trim();
   const comissao = parseFloat(document.getElementById('cfg-comissao').value) || 10;
   const senha = document.getElementById('cfg-senha').value;
+
   const cfgGlobal = carregarCfgGlobal();
   cfgGlobal.walletPadrao = wallet;
   cfgGlobal.comissaoPadrao = comissao;
   if (senha) cfgGlobal.senha = senha;
   salvarCfgGlobal(cfgGlobal);
-  if (sessao) { if (apiKey) sessao.apiKey = apiKey; sessao.env = env; }
+
+  if (sessao) {
+    if (apiKey) sessao.apiKey = apiKey;
+    sessao.env = env;
+  }
+
   document.getElementById('env-badge').textContent = env === 'sandbox' ? 'Sandbox' : 'Produção';
   document.getElementById('env-badge').className = 'env-badge' + (env === 'production' ? ' prod' : '');
   if (wallet) document.getElementById('r-wallet').value = wallet;
   document.getElementById('r-comissao').value = comissao;
   document.getElementById('cfg-senha').value = '';
+
   const saved = document.getElementById('config-saved');
   saved.classList.add('show');
   setTimeout(() => saved.classList.remove('show'), 3000);
@@ -726,6 +789,7 @@ function salvarConfig() {
 function fmt(v) {
   return 'R$ ' + (v||0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
+
 function copiarLink() {
   navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(() => {
     const btn = document.querySelector('.copy-btn');
@@ -733,12 +797,15 @@ function copiarLink() {
     setTimeout(() => btn.textContent = 'Copiar', 2000);
   });
 }
+
 function mostrarAlerta(el, msg) { el.textContent = msg; el.classList.add('show'); }
+
 function extrairErro(data) {
   if (data && data.errors && data.errors.length) return data.errors.map(e => e.description).join('. ');
   if (data && data.message) return data.message;
   return JSON.stringify(data);
 }
+
 function labelPagamento(tipo) {
   return { PIX:'Pix', BOLETO:'Boleto', CREDIT_CARD:'Cartão', UNDEFINED:'Livre' }[tipo] || tipo;
 }
