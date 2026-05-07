@@ -1,7 +1,3 @@
 [build]
   publish = "."
-  edge_functions = "netlify/edge-functions"
-
-[[edge_functions]]
-  path = "/api/*"
-  function = "asaas-proxy"
+  functions = "netlify/functions"

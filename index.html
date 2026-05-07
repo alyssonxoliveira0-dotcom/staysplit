@@ -178,8 +178,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       <label>Senha de acesso</label>
       <input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter') fazerLogin()">
     </div>
-    <button class="btn btn-primary" onclick="fazerLogin()">Entrar no painel</button>
-    <p class="login-note">Seus dados ficam salvos neste navegador.</p>
+    <button class="btn btn-primary" id="btn-login" onclick="fazerLogin()">Entrar no painel</button>
+    <p class="login-note">Seus dados ficam salvos com segurança na nuvem.</p>
   </div>
 </div>
 
@@ -360,25 +360,51 @@ const SENHA_PADRAO = 'admin123';
 let sessao = null; // { apiKey, env }
 
 // ═══════════════════════════════════════════════════════
-// STORAGE — chave única por API Key
+// STORAGE — Netlify Blobs (primário) + localStorage (cache/fallback)
 // ═══════════════════════════════════════════════════════
+const STORAGE_URL = '/.netlify/functions/storage';
+
 function storageKey(tipo, apiKey) {
   const id = (apiKey || '').replace(/[^a-zA-Z0-9]/g, '').slice(-16) || 'default';
   return 'ss_' + tipo + '_' + id;
 }
 
-function salvarDados(tipo, dados) {
-  if (!sessao) return;
-  try {
-    localStorage.setItem(storageKey(tipo, sessao.apiKey), JSON.stringify(dados));
-  } catch(e) {}
-}
-
-function carregarDados(tipo, apiKey) {
+function localGet(tipo, apiKey) {
   try {
     const raw = localStorage.getItem(storageKey(tipo, apiKey));
     return raw ? JSON.parse(raw) : null;
   } catch(e) { return null; }
+}
+
+function localSet(tipo, dados, apiKey) {
+  const key = apiKey || (sessao && sessao.apiKey);
+  if (!key) return;
+  try { localStorage.setItem(storageKey(tipo, key), JSON.stringify(dados)); } catch(e) {}
+}
+
+async function storageGet(tipo, apiKey) {
+  try {
+    const res = await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(apiKey)}&tipo=${tipo}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data !== null) { localSet(tipo, data, apiKey); return data; }
+    }
+  } catch(e) {}
+  const local = localGet(tipo, apiKey);
+  if (local !== null) storageSet(tipo, local).catch(() => {});
+  return local;
+}
+
+async function storageSet(tipo, dados) {
+  if (!sessao) return;
+  localSet(tipo, dados, sessao.apiKey);
+  try {
+    await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(sessao.apiKey)}&tipo=${tipo}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados)
+    });
+  } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════════
@@ -407,7 +433,7 @@ window.onload = () => {
 // ═══════════════════════════════════════════════════════
 // LOGIN / LOGOUT
 // ═══════════════════════════════════════════════════════
-function fazerLogin() {
+async function fazerLogin() {
   const apiKey = document.getElementById('login-apikey').value.trim();
   const senha = document.getElementById('login-senha').value;
   const env = document.getElementById('login-env').value;
@@ -420,20 +446,25 @@ function fazerLogin() {
   const cfgGlobal = carregarCfgGlobal();
   if (senha !== cfgGlobal.senha) { mostrarAlerta(errEl, 'Senha incorreta.'); return; }
 
-  // Inicia sessão
+  const btnLogin = document.getElementById('btn-login');
+  btnLogin.disabled = true;
+  btnLogin.textContent = 'Carregando...';
+
   sessao = { apiKey, env };
 
-  // Carrega dados desta conta
-  const historico = carregarDados('hist', apiKey) || [];
-  const hoteis = carregarDados('hoteis', apiKey) || [];
+  const [historico, hoteis] = await Promise.all([
+    storageGet('hist', apiKey),
+    storageGet('hoteis', apiKey)
+  ]);
 
-  // Atualiza interface
+  btnLogin.disabled = false;
+  btnLogin.textContent = 'Entrar no painel';
+
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('env-badge').textContent = env === 'sandbox' ? 'Sandbox' : 'Produção';
   document.getElementById('env-badge').className = 'env-badge' + (env === 'production' ? ' prod' : '');
 
-  // Preenche configurações
   document.getElementById('cfg-apikey').value = apiKey;
   document.getElementById('cfg-env').value = env;
   document.getElementById('cfg-comissao').value = cfgGlobal.comissaoPadrao;
@@ -441,15 +472,13 @@ function fazerLogin() {
   if (cfgGlobal.walletPadrao) document.getElementById('r-wallet').value = cfgGlobal.walletPadrao;
   document.getElementById('r-comissao').value = cfgGlobal.comissaoPadrao;
 
-  // Renderiza dados carregados
-  renderHistorico(historico);
-  renderHoteis(hoteis);
-  renderFinanceiro(historico);
+  renderHistorico(historico || []);
+  renderHoteis(hoteis || []);
+  renderFinanceiro(historico || []);
 }
 
 function fazerLogout() {
   sessao = null;
-  // Limpa campos da tela
   ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor','r-wallet'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -461,7 +490,6 @@ function fazerLogout() {
   document.getElementById('login-senha').value = '';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  // Reset tabs
   mudarTab('nova');
 }
 
@@ -469,9 +497,8 @@ function fazerLogout() {
 // API CALL
 // ═══════════════════════════════════════════════════════
 async function asaasAPI(method, path, body) {
-  // Passa token e env via query params para contornar bloqueio de headers no Netlify Edge
   const sep = path.includes('?') ? '&' : '?';
-  const url = '/api' + path + sep + '_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
+  const url = '/.netlify/functions/asaas' + path + sep + '_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
   const res = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -496,9 +523,9 @@ function mudarTab(id) {
     if (p) p.classList.toggle('active', i===id);
   });
   if (!sessao) return;
-  if (id === 'historico') renderHistorico(carregarDados('hist', sessao.apiKey) || []);
-  if (id === 'financeiro') renderFinanceiro(carregarDados('hist', sessao.apiKey) || []);
-  if (id === 'hoteis') renderHoteis(carregarDados('hoteis', sessao.apiKey) || []);
+  if (id === 'historico') renderHistorico(localGet('hist', sessao.apiKey) || []);
+  if (id === 'financeiro') renderFinanceiro(localGet('hist', sessao.apiKey) || []);
+  if (id === 'hoteis') renderHoteis(localGet('hoteis', sessao.apiKey) || []);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -601,7 +628,6 @@ async function gerarCobranca() {
 
     const invoiceUrl = cob.invoiceUrl || cob.bankSlipUrl || '';
 
-    // Exibe resultado
     document.getElementById('result-url').textContent = invoiceUrl;
     document.getElementById('result-valor').textContent = fmt(valor);
     document.getElementById('result-tipo').textContent = labelPagamento(pagamentoSelecionado);
@@ -609,21 +635,19 @@ async function gerarCobranca() {
     document.getElementById('result-id').textContent = cob.id;
     document.getElementById('result-box').classList.add('show');
 
-    // WhatsApp
     const wfone = fone.replace(/\D/g,'');
     const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valor)}`);
     document.getElementById('whatsapp-btn').href = `https://wa.me/55${wfone}?text=${msg}`;
 
-    // SALVA NO HISTÓRICO DESTA CONTA
     const novoItem = {
       id: cob.id, hotel, quarto, checkin, checkout,
       hospede: nome, valor, pct, wallet,
       tipo: pagamentoSelecionado, url: invoiceUrl,
       criadoEm: new Date().toLocaleString('pt-BR')
     };
-    const histAtual = carregarDados('hist', sessao.apiKey) || [];
+    const histAtual = localGet('hist', sessao.apiKey) || [];
     histAtual.unshift(novoItem);
-    salvarDados('hist', histAtual.slice(0, 50));
+    await storageSet('hist', histAtual.slice(0, 50));
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
 
@@ -638,15 +662,15 @@ async function gerarCobranca() {
 // ═══════════════════════════════════════════════════════
 // HOTÉIS
 // ═══════════════════════════════════════════════════════
-function salvarHotel() {
+async function salvarHotel() {
   const nome = document.getElementById('novo-hotel-nome').value.trim();
   const wallet = document.getElementById('novo-hotel-wallet').value.trim();
   const comissao = parseFloat(document.getElementById('novo-hotel-comissao').value) || 10;
   const obs = document.getElementById('novo-hotel-obs').value.trim();
   if (!nome || !wallet) { alert('Informe o nome e o WalletId.'); return; }
-  const hoteis = carregarDados('hoteis', sessao.apiKey) || [];
+  const hoteis = localGet('hoteis', sessao.apiKey) || [];
   hoteis.unshift({ id: Date.now(), nome, wallet, comissao, obs, criadoEm: new Date().toLocaleDateString('pt-BR') });
-  salvarDados('hoteis', hoteis);
+  await storageSet('hoteis', hoteis);
   document.getElementById('novo-hotel-nome').value = '';
   document.getElementById('novo-hotel-wallet').value = '';
   document.getElementById('novo-hotel-obs').value = '';
@@ -654,7 +678,7 @@ function salvarHotel() {
 }
 
 function usarHotel(id) {
-  const hoteis = carregarDados('hoteis', sessao.apiKey) || [];
+  const hoteis = localGet('hoteis', sessao.apiKey) || [];
   const h = hoteis.find(x => x.id === id);
   if (!h) return;
   document.getElementById('r-hotel').value = h.nome;
@@ -664,11 +688,11 @@ function usarHotel(id) {
   mudarTab('nova');
 }
 
-function deletarHotel(id) {
+async function deletarHotel(id) {
   if (!confirm('Remover este parceiro?')) return;
-  let hoteis = carregarDados('hoteis', sessao.apiKey) || [];
+  let hoteis = localGet('hoteis', sessao.apiKey) || [];
   hoteis = hoteis.filter(x => x.id !== id);
-  salvarDados('hoteis', hoteis);
+  await storageSet('hoteis', hoteis);
   renderHoteis(hoteis);
 }
 

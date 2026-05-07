@@ -3,7 +3,7 @@ const https = require('https');
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, access_token, x-env',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Content-Type': 'application/json'
   };
@@ -12,16 +12,24 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers, body: '' };
   }
 
-  const asaasPath = event.path.replace('/.netlify/functions/asaas', '');
-  const apiKey = event.headers['access_token'] || '';
-  const env = event.headers['x-env'] || 'sandbox';
+  const params = event.queryStringParameters || {};
+  const apiKey = params._token || '';
+  const env = params._env || 'sandbox';
+
+  const asaasPath = event.path.replace('/.netlify/functions/asaas', '') || '/';
+  const qs = new URLSearchParams(params);
+  qs.delete('_token');
+  qs.delete('_env');
+  const qsStr = qs.toString();
+
   const host = env === 'production' ? 'api.asaas.com' : 'sandbox.asaas.com';
+  const targetPath = '/api/v3' + asaasPath + (qsStr ? '?' + qsStr : '');
 
   return new Promise((resolve) => {
     const options = {
       hostname: host,
       port: 443,
-      path: '/api/v3' + asaasPath,
+      path: targetPath,
       method: event.httpMethod,
       headers: {
         'Content-Type': 'application/json',
@@ -34,7 +42,7 @@ exports.handler = async (event) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
-        resolve({ statusCode: res.statusCode, headers, body });
+        resolve({ statusCode: res.statusCode, headers, body: body || '{}' });
       });
     });
 
