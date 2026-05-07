@@ -332,7 +332,7 @@ function localSet(tipo, dados) {
 async function storageGet(tipo) {
   if (!sessao) return null;
   try {
-    const url = '/storage?_token=' + encodeURIComponent(sessao.apiKey) + '&tipo=' + tipo;
+    const url = '/.netlify/functions/storage?_token=' + encodeURIComponent(sessao.apiKey) + '&tipo=' + tipo;
     const res = await fetch(url);
     if (!res.ok) throw new Error('storage get failed');
     const data = await res.json();
@@ -346,7 +346,7 @@ async function storageGet(tipo) {
 async function storageSet(tipo, dados) {
   localSet(tipo, dados); // grava local imediatamente
   try {
-    const url = '/storage?_token=' + encodeURIComponent(sessao.apiKey) + '&tipo=' + tipo;
+    const url = '/.netlify/functions/storage?_token=' + encodeURIComponent(sessao.apiKey) + '&tipo=' + tipo;
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

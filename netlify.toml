@@ -1,11 +1,8 @@
 [build]
   publish = "."
   edge_functions = "netlify/edge-functions"
+  functions = "netlify/functions"
 
 [[edge_functions]]
   path = "/api/*"
   function = "asaas-proxy"
-
-[[edge_functions]]
-  path = "/storage"
-  function = "storage"
