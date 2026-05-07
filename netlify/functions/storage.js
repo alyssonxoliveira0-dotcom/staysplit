@@ -1,5 +1,11 @@
 const { getStore } = require('@netlify/blobs');
 
+function blobTimeout(ms) {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`blobs timeout after ${ms}ms`)), ms)
+  );
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -25,16 +31,19 @@ exports.handler = async (event) => {
   try {
     store = getStore('staysplit');
   } catch (e) {
-    console.error('[storage] getStore failed:', e.message, e.stack);
+    console.error('[storage] getStore failed:', e.message);
     return { statusCode: 503, headers, body: JSON.stringify({ error: 'store_init_failed', detail: e.message }) };
   }
 
   if (event.httpMethod === 'GET') {
     try {
-      const data = await store.get(blobKey, { type: 'json' });
+      const data = await Promise.race([
+        store.get(blobKey, { type: 'json' }),
+        blobTimeout(8000)
+      ]);
       return { statusCode: 200, headers, body: JSON.stringify(data != null ? data : null) };
     } catch (e) {
-      console.error('[storage] GET failed — key:', blobKey, '| error:', e.message, e.stack);
+      console.error('[storage] GET failed — key:', blobKey, '| error:', e.message);
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'get_failed', detail: e.message }) };
     }
   }
@@ -42,10 +51,13 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'POST') {
     try {
       const body = JSON.parse(event.body || 'null');
-      await store.setJSON(blobKey, body);
+      await Promise.race([
+        store.setJSON(blobKey, body),
+        blobTimeout(8000)
+      ]);
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
     } catch (e) {
-      console.error('[storage] POST failed — key:', blobKey, '| error:', e.message, e.stack);
+      console.error('[storage] POST failed — key:', blobKey, '| error:', e.message);
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'set_failed', detail: e.message }) };
     }
   }

@@ -353,14 +353,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// ESTADO GLOBAL
-// ═══════════════════════════════════════════════════════
 const SENHA_PADRAO = 'admin123';
-let sessao = null; // { apiKey, env }
+let sessao = null;
 
 // ═══════════════════════════════════════════════════════
-// STORAGE — Netlify Blobs (primário) + localStorage (cache/fallback)
+// STORAGE — Netlify Blobs (primário) + localStorage (fallback)
 // ═══════════════════════════════════════════════════════
 const STORAGE_URL = '/.netlify/functions/storage';
 
@@ -384,15 +381,16 @@ function localSet(tipo, dados, apiKey) {
 
 async function storageGet(tipo, apiKey) {
   try {
-    const res = await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(apiKey)}&tipo=${tipo}`);
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(apiKey)}&tipo=${tipo}`, { signal: controller.signal });
+    clearTimeout(tid);
     if (res.ok) {
       const data = await res.json();
       if (data !== null) { localSet(tipo, data, apiKey); return data; }
     }
   } catch(e) {}
-  const local = localGet(tipo, apiKey);
-  if (local !== null) storageSet(tipo, local).catch(() => {});
-  return local;
+  return localGet(tipo, apiKey);
 }
 
 async function storageSet(tipo, dados) {
@@ -408,7 +406,7 @@ async function storageSet(tipo, dados) {
 }
 
 // ═══════════════════════════════════════════════════════
-// CONFIGURAÇÕES GLOBAIS (não dependem da sessão)
+// CONFIGURAÇÕES GLOBAIS
 // ═══════════════════════════════════════════════════════
 function carregarCfgGlobal() {
   try {
@@ -498,7 +496,6 @@ function fazerLogout() {
 // ═══════════════════════════════════════════════════════
 async function asaasAPI(method, path, body) {
   const url = '/.netlify/functions/asaas?_path=' + encodeURIComponent(path) + '&_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
-  const url = '/.netlify/functions/asaas' + path + sep + '_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
   const res = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -507,7 +504,7 @@ async function asaasAPI(method, path, body) {
   const text = await res.text();
   let data;
   try { data = JSON.parse(text); }
-  catch(e) { throw new Error('Resposta inválida: ' + text.slice(0,100)); }
+  catch(e) { throw new Error('Resposta inválida: ' + text.slice(0, 100)); }
   if (!res.ok) throw new Error(extrairErro(data));
   return data;
 }
