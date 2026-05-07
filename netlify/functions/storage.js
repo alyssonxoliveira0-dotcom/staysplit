@@ -20,14 +20,22 @@ exports.handler = async (event) => {
 
   const id = token.replace(/[^a-zA-Z0-9]/g, '').slice(-16) || 'default';
   const blobKey = `${tipo}_${id}`;
-  const store = getStore('staysplit');
+
+  let store;
+  try {
+    store = getStore('staysplit');
+  } catch (e) {
+    console.error('[storage] getStore failed:', e.message, e.stack);
+    return { statusCode: 503, headers, body: JSON.stringify({ error: 'store_init_failed', detail: e.message }) };
+  }
 
   if (event.httpMethod === 'GET') {
     try {
       const data = await store.get(blobKey, { type: 'json' });
       return { statusCode: 200, headers, body: JSON.stringify(data != null ? data : null) };
     } catch (e) {
-      return { statusCode: 200, headers, body: JSON.stringify(null) };
+      console.error('[storage] GET failed — key:', blobKey, '| error:', e.message, e.stack);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'get_failed', detail: e.message }) };
     }
   }
 
@@ -37,7 +45,8 @@ exports.handler = async (event) => {
       await store.setJSON(blobKey, body);
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
     } catch (e) {
-      return { statusCode: 500, headers, body: JSON.stringify({ error: String(e) }) };
+      console.error('[storage] POST failed — key:', blobKey, '| error:', e.message, e.stack);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'set_failed', detail: e.message }) };
     }
   }
 
