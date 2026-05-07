@@ -497,7 +497,7 @@ function fazerLogout() {
 // API CALL
 // ═══════════════════════════════════════════════════════
 async function asaasAPI(method, path, body) {
-  const sep = path.includes('?') ? '&' : '?';
+  const url = '/.netlify/functions/asaas?_path=' + encodeURIComponent(path) + '&_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
   const url = '/.netlify/functions/asaas' + path + sep + '_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
   const res = await fetch(url, {
     method,

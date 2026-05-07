@@ -15,15 +15,18 @@ exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const apiKey = params._token || '';
   const env = params._env || 'sandbox';
+  const asaasPath = params._path || '/';
 
-  const asaasPath = event.path.replace('/.netlify/functions/asaas', '') || '/';
   const qs = new URLSearchParams(params);
   qs.delete('_token');
   qs.delete('_env');
+  qs.delete('_path');
   const qsStr = qs.toString();
 
   const host = env === 'production' ? 'api.asaas.com' : 'sandbox.asaas.com';
   const targetPath = '/api/v3' + asaasPath + (qsStr ? '?' + qsStr : '');
+
+  console.log('[asaas] proxy:', event.httpMethod, host + targetPath);
 
   return new Promise((resolve) => {
     const options = {
@@ -42,11 +45,13 @@ exports.handler = async (event) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
+        console.log('[asaas] response:', res.statusCode, body.slice(0, 120));
         resolve({ statusCode: res.statusCode, headers, body: body || '{}' });
       });
     });
 
     req.on('error', (e) => {
+      console.error('[asaas] request error:', e.message);
       resolve({
         statusCode: 500,
         headers,
