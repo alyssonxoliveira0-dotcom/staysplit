@@ -20,7 +20,6 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--deep); min-height: 100vh; }
 
-/* LOGIN */
 #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--deep); position: relative; overflow: hidden; }
 #login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 20% 50%, rgba(196,98,45,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 30%, rgba(181,134,13,0.12) 0%, transparent 60%); }
 .login-card { background: var(--white); border-radius: 20px; padding: 52px 48px; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow-lg); }
@@ -30,13 +29,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .brand p { font-size: 13px; color: var(--bark); margin-top: 4px; }
 .login-note { text-align: center; font-size: 12px; color: var(--bark); margin-top: 20px; line-height: 1.6; }
 
-/* FORMS */
 .form-group { margin-bottom: 16px; }
 .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--warm); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--deep); background: var(--cream); transition: border-color .2s; outline: none; }
 .form-group input:focus, .form-group select:focus { border-color: var(--accent); background: var(--white); }
 
-/* BUTTONS */
 .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
 .btn-primary { background: var(--accent); color: var(--white); }
 .btn-primary:hover { background: #a8521f; }
@@ -45,7 +42,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .btn-success:hover { background: #1d4d38; }
 .btn-success:disabled { opacity: .6; cursor: not-allowed; }
 
-/* APP */
 #app { display: none; min-height: 100vh; }
 .topbar { background: var(--deep); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
 .topbar-brand { font-family: 'DM Serif Display', serif; color: var(--white); font-size: 20px; display: flex; align-items: center; gap: 10px; }
@@ -57,14 +53,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .logout-btn:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
 .main-content { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
 
-/* TABS */
 .tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--warm); border-radius: 12px; padding: 4px; width: fit-content; }
 .tab-btn { padding: 9px 20px; border: none; border-radius: 9px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
 .tab-btn.active { background: var(--white); color: var(--deep); box-shadow: 0 1px 6px rgba(44,33,24,0.1); }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* CARDS */
 .card { background: var(--white); border-radius: 16px; padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 20px; }
 .card-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--deep); margin-bottom: 6px; }
 .card-sub { font-size: 13px; color: var(--bark); margin-bottom: 24px; line-height: 1.5; }
@@ -72,14 +66,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .section-sep { height: 1px; background: var(--warm); margin: 20px 0; }
 
-/* PAYMENT TYPES */
 .payment-types { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
 .pay-type-btn { flex: 1; min-width: 100px; padding: 14px 10px; border: 2px solid var(--warm); border-radius: 12px; background: var(--cream); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; }
 .pay-type-btn.selected { border-color: var(--accent); background: var(--accent-light); }
 .pay-type-icon { font-size: 22px; display: block; margin-bottom: 6px; }
 .pay-type-label { font-size: 13px; font-weight: 500; color: var(--deep); }
 
-/* SPLIT PREVIEW */
 .split-preview { background: var(--cream); border-radius: 12px; padding: 20px; margin-top: 16px; }
 .split-preview-title { font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
 .split-bar-wrap { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
@@ -89,7 +81,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .split-legend-item { display: flex; align-items: center; gap: 6px; }
 .split-dot { width: 8px; height: 8px; border-radius: 50%; }
 
-/* RESULT */
 .result-box { background: var(--success-light); border: 1.5px solid #95D5B2; border-radius: 14px; padding: 24px 28px; margin-top: 20px; display: none; }
 .result-box.show { display: block; }
 .result-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--success); margin-bottom: 16px; }
@@ -101,15 +92,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .result-detail-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
 .result-detail-value { font-size: 15px; font-weight: 600; color: var(--deep); }
 .whatsapp-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: var(--white); border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; margin-top: 12px; width: 100%; }
+.nova-cob-btn { display: block; width: 100%; padding: 13px; border: 2px solid var(--bark); border-radius: 10px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: all .2s; }
+.nova-cob-btn:hover { background: var(--bark); color: var(--white); }
 
-/* HOTEIS */
 .hotel-item { background: var(--cream); border: 1.5px solid var(--warm); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .hotel-item-name { font-size: 14px; font-weight: 600; color: var(--deep); }
 .hotel-item-meta { font-size: 12px; color: var(--bark); margin-top: 2px; }
 .hotel-usar-btn { background: var(--accent); color: var(--white); border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .hotel-del-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
 
-/* HISTORICO */
 .historico-empty { text-align: center; padding: 60px 20px; color: var(--bark); }
 .cobranca-item { background: var(--white); border: 1.5px solid var(--warm); border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .cob-hotel { font-size: 14px; font-weight: 600; color: var(--deep); }
@@ -120,24 +111,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .cob-link-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .cob-link-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* FINANCEIRO */
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .stat-card { background: var(--cream); border-radius: 12px; padding: 18px 20px; }
 .stat-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--deep); }
-.stat-sub { font-size: 12px; color: var(--bark); margin-top: 4px; }
 
-/* CONFIG */
 .config-saved { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--gold); font-weight: 500; display: none; margin-top: 12px; }
 .config-saved.show { display: block; }
 
-/* LOADING */
 .loading { display: none; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: var(--bark); font-size: 14px; }
 .loading.show { display: flex; }
 .spinner { width: 20px; height: 20px; border: 2px solid var(--warm); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ALERTS */
 .alert { border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; line-height: 1.5; }
 .alert.show { display: block; }
 .alert-error { background: #FEE2E2; border: 1.5px solid #FCA5A5; color: #991B1B; }
@@ -154,7 +140,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
     <div class="brand">
@@ -183,7 +168,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <div class="topbar">
     <div class="topbar-brand"><span>🏨</span> StaySplit</div>
@@ -202,7 +186,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       <button class="tab-btn" onclick="mudarTab('config')">Configurações</button>
     </div>
 
-    <!-- NOVA COBRANÇA -->
     <div class="tab-panel active" id="tab-nova">
       <div class="card">
         <div class="card-title">Gerar cobrança de reserva</div>
@@ -288,10 +271,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
           <div class="result-detail-item"><div class="result-detail-label">ID</div><div class="result-detail-value" id="result-id" style="font-size:12px;font-family:monospace"></div></div>
         </div>
         <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">📱 Enviar por WhatsApp</a>
+        <button class="nova-cob-btn" onclick="novaCobranca()">+ Nova cobrança</button>
       </div>
     </div>
 
-    <!-- HOTÉIS -->
     <div class="tab-panel" id="tab-hoteis">
       <div class="card">
         <div class="card-title">Hotéis e pousadas</div>
@@ -309,7 +292,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       </div>
     </div>
 
-    <!-- HISTÓRICO -->
     <div class="tab-panel" id="tab-historico">
       <div class="card">
         <div class="card-title">Histórico de cobranças</div>
@@ -318,7 +300,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       </div>
     </div>
 
-    <!-- FINANCEIRO -->
     <div class="tab-panel" id="tab-financeiro">
       <div class="card">
         <div class="card-title">Painel financeiro</div>
@@ -332,7 +313,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       </div>
     </div>
 
-    <!-- CONFIGURAÇÕES -->
     <div class="tab-panel" id="tab-config">
       <div class="card">
         <div class="card-title">Configurações</div>
@@ -348,7 +328,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         <div class="config-saved" id="config-saved">✓ Configurações salvas!</div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -356,9 +335,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 const SENHA_PADRAO = 'admin123';
 let sessao = null;
 
-// ═══════════════════════════════════════════════════════
-// STORAGE — Netlify Blobs (primário) + localStorage (fallback)
-// ═══════════════════════════════════════════════════════
 const STORAGE_URL = '/.netlify/functions/storage';
 
 function storageKey(tipo, apiKey) {
@@ -405,9 +381,6 @@ async function storageSet(tipo, dados) {
   } catch(e) {}
 }
 
-// ═══════════════════════════════════════════════════════
-// CONFIGURAÇÕES GLOBAIS
-// ═══════════════════════════════════════════════════════
 function carregarCfgGlobal() {
   try {
     const raw = localStorage.getItem('ss_cfg_global');
@@ -419,18 +392,12 @@ function salvarCfgGlobal(cfg) {
   localStorage.setItem('ss_cfg_global', JSON.stringify(cfg));
 }
 
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
 window.onload = () => {
   const hoje = new Date().toISOString().split('T')[0];
   document.getElementById('r-checkin').min = hoje;
   document.getElementById('r-checkout').min = hoje;
 };
 
-// ═══════════════════════════════════════════════════════
-// LOGIN / LOGOUT
-// ═══════════════════════════════════════════════════════
 async function fazerLogin() {
   const apiKey = document.getElementById('login-apikey').value.trim();
   const senha = document.getElementById('login-senha').value;
@@ -491,9 +458,6 @@ function fazerLogout() {
   mudarTab('nova');
 }
 
-// ═══════════════════════════════════════════════════════
-// API CALL
-// ═══════════════════════════════════════════════════════
 async function asaasAPI(method, path, body) {
   const url = '/.netlify/functions/asaas?_path=' + encodeURIComponent(path) + '&_token=' + encodeURIComponent(sessao.apiKey) + '&_env=' + sessao.env;
   const res = await fetch(url, {
@@ -509,9 +473,6 @@ async function asaasAPI(method, path, body) {
   return data;
 }
 
-// ═══════════════════════════════════════════════════════
-// TABS
-// ═══════════════════════════════════════════════════════
 function mudarTab(id) {
   const ids = ['nova','hoteis','historico','financeiro','config'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ids[i]===id));
@@ -525,9 +486,6 @@ function mudarTab(id) {
   if (id === 'hoteis') renderHoteis(localGet('hoteis', sessao.apiKey) || []);
 }
 
-// ═══════════════════════════════════════════════════════
-// PAGAMENTO
-// ═══════════════════════════════════════════════════════
 let pagamentoSelecionado = 'PIX';
 function selecionarPagamento(tipo) {
   pagamentoSelecionado = tipo;
@@ -537,9 +495,6 @@ function selecionarPagamento(tipo) {
   atualizarPreview();
 }
 
-// ═══════════════════════════════════════════════════════
-// SPLIT PREVIEW
-// ═══════════════════════════════════════════════════════
 function atualizarPreview() {
   const valor = parseFloat(document.getElementById('r-valor').value) || 0;
   const pct = parseFloat(document.getElementById('r-comissao').value) || 0;
@@ -555,9 +510,6 @@ function atualizarPreview() {
   } else { preview.style.display = 'none'; }
 }
 
-// ═══════════════════════════════════════════════════════
-// GERAR COBRANÇA
-// ═══════════════════════════════════════════════════════
 async function gerarCobranca() {
   const nome = document.getElementById('h-nome').value.trim();
   const cpf = document.getElementById('h-cpf').value.replace(/\D/g,'');
@@ -656,9 +608,6 @@ async function gerarCobranca() {
   }
 }
 
-// ═══════════════════════════════════════════════════════
-// HOTÉIS
-// ═══════════════════════════════════════════════════════
 async function salvarHotel() {
   const nome = document.getElementById('novo-hotel-nome').value.trim();
   const wallet = document.getElementById('novo-hotel-wallet').value.trim();
@@ -713,9 +662,6 @@ function renderHoteis(hoteis) {
   `).join('');
 }
 
-// ═══════════════════════════════════════════════════════
-// HISTÓRICO
-// ═══════════════════════════════════════════════════════
 function renderHistorico(historico) {
   const el = document.getElementById('historico-lista');
   if (!historico || historico.length === 0) {
@@ -735,9 +681,6 @@ function renderHistorico(historico) {
   `).join('');
 }
 
-// ═══════════════════════════════════════════════════════
-// FINANCEIRO
-// ═══════════════════════════════════════════════════════
 function renderFinanceiro(historico) {
   const h = historico || [];
   const volume = h.reduce((s,x) => s+x.valor, 0);
@@ -748,9 +691,6 @@ function renderFinanceiro(historico) {
   document.getElementById('fin-receita').textContent = fmt(volume - comissoes);
 }
 
-// ═══════════════════════════════════════════════════════
-// CONFIGURAÇÕES
-// ═══════════════════════════════════════════════════════
 function salvarConfig() {
   const apiKey = document.getElementById('cfg-apikey').value.trim();
   const env = document.getElementById('cfg-env').value;
@@ -780,9 +720,6 @@ function salvarConfig() {
   setTimeout(() => saved.classList.remove('show'), 3000);
 }
 
-// ═══════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════
 function fmt(v) {
   return 'R$ ' + (v||0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
@@ -793,6 +730,19 @@ function copiarLink() {
     btn.textContent = '✓ Copiado!';
     setTimeout(() => btn.textContent = 'Copiar', 2000);
   });
+}
+
+function novaCobranca() {
+  ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('result-box').classList.remove('show');
+  document.getElementById('nova-error').classList.remove('show');
+  document.getElementById('nova-info').classList.remove('show');
+  document.getElementById('split-preview').style.display = 'none';
+  selecionarPagamento('PIX');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function mostrarAlerta(el, msg) { el.textContent = msg; el.classList.add('show'); }
