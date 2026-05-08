@@ -335,9 +335,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 const SENHA_PADRAO = 'admin123';
 let sessao = null;
 
-const STORAGE_URL = '/.netlify/functions/storage';
-
-function storageKey(tipo, apiKey) {
+async function storageGet(tipo, apiKey) {
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(apiKey)}&tipo=${tipo}`, { signal: controller.signal });
+    clearTimeout(tid);
+    if (res.ok) {
+      const data = await res.json();
+      if (data !== null) { localSet(tipo, data, apiKey); return data; }
+    }
+  } catch(e) {}
+  return localGet(tipo, apiKey);
+}
   const id = (apiKey || '').replace(/[^a-zA-Z0-9]/g, '').slice(-16) || 'default';
   return 'ss_' + tipo + '_' + id;
 }
@@ -422,6 +432,12 @@ async function fazerLogin() {
     storageGet('hoteis', apiKey)
   ]);
 
+  // Migração: se KV vazio mas localStorage tem dados (pré-rotação do token), sobe para nuvem
+  const histLocal = localGet('hist', apiKey);
+  const hoteisLocal = localGet('hoteis', apiKey);
+  if (!historico && histLocal && histLocal.length > 0) storageSet('hist', histLocal);
+  if (!hoteis && hoteisLocal && hoteisLocal.length > 0) storageSet('hoteis', hoteisLocal);
+
   btnLogin.disabled = false;
   btnLogin.textContent = 'Entrar no painel';
 
@@ -453,6 +469,8 @@ function fazerLogout() {
   document.getElementById('nova-info').classList.remove('show');
   document.getElementById('login-apikey').value = '';
   document.getElementById('login-senha').value = '';
+  const storageWarn = document.getElementById('storage-warn');
+  if (storageWarn) storageWarn.remove();
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   mudarTab('nova');
@@ -614,7 +632,7 @@ async function salvarHotel() {
   const comissao = parseFloat(document.getElementById('novo-hotel-comissao').value) || 10;
   const obs = document.getElementById('novo-hotel-obs').value.trim();
   if (!nome || !wallet) { alert('Informe o nome e o WalletId.'); return; }
-  const hoteis = localGet('hoteis', sessao.apiKey) || [];
+  const hoteis = (await storageGet('hoteis', sessao.apiKey)) || localGet('hoteis', sessao.apiKey) || [];
   hoteis.unshift({ id: Date.now(), nome, wallet, comissao, obs, criadoEm: new Date().toLocaleDateString('pt-BR') });
   await storageSet('hoteis', hoteis);
   document.getElementById('novo-hotel-nome').value = '';
@@ -624,7 +642,7 @@ async function salvarHotel() {
 }
 
 function usarHotel(id) {
-  const hoteis = localGet('hoteis', sessao.apiKey) || [];
+  const hoteis = (await storageGet('hoteis', sessao.apiKey)) || localGet('hoteis', sessao.apiKey) || [];
   const h = hoteis.find(x => x.id === id);
   if (!h) return;
   document.getElementById('r-hotel').value = h.nome;
@@ -636,8 +654,7 @@ function usarHotel(id) {
 
 async function deletarHotel(id) {
   if (!confirm('Remover este parceiro?')) return;
-  let hoteis = localGet('hoteis', sessao.apiKey) || [];
-  hoteis = hoteis.filter(x => x.id !== id);
+  const hoteis = ((await storageGet('hoteis', sessao.apiKey)) || localGet('hoteis', sessao.apiKey) || []).filter(x => x.id !== id);
   await storageSet('hoteis', hoteis);
   renderHoteis(hoteis);
 }
