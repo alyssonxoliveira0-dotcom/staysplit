@@ -26,32 +26,53 @@ exports.handler = async (event) => {
   const host = env === 'production' ? 'api.asaas.com' : 'sandbox.asaas.com';
   const targetPath = '/api/v3' + asaasPath + (qsStr ? '?' + qsStr : '');
 
-  console.log('[asaas] proxy:', event.httpMethod, host + targetPath);
+  let bodyStr = '';
+  if (event.body) {
+    bodyStr = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString('utf8')
+      : event.body;
+  }
+
+  console.log('[asaas] ===== REQUEST =====');
+  console.log('[asaas] method:', event.httpMethod);
+  console.log('[asaas] host:', host);
+  console.log('[asaas] path:', targetPath);
+  console.log('[asaas] apiKey present:', !!apiKey, '| length:', apiKey.length);
+  console.log('[asaas] qs params repassados:', qsStr || '(nenhum)');
+  console.log('[asaas] body enviado:', bodyStr || '(vazio)');
 
   return new Promise((resolve) => {
+    const reqHeaders = {
+      'Content-Type': 'application/json',
+      'access_token': apiKey,
+      'User-Agent': 'StaySplit/1.0'
+    };
+
+    if (bodyStr) {
+      reqHeaders['Content-Length'] = Buffer.byteLength(bodyStr);
+    }
+
     const options = {
       hostname: host,
       port: 443,
       path: targetPath,
       method: event.httpMethod,
-      headers: {
-        'Content-Type': 'application/json',
-        'access_token': apiKey,
-        'User-Agent': 'StaySplit/1.0'
-      }
+      headers: reqHeaders
     };
 
     const req = https.request(options, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
+      let data = '';
+      res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        console.log('[asaas] response:', res.statusCode, body.slice(0, 120));
-        resolve({ statusCode: res.statusCode, headers, body: body || '{}' });
+        console.log('[asaas] ===== RESPONSE =====');
+        console.log('[asaas] status:', res.statusCode);
+        console.log('[asaas] body completo:', data);
+        resolve({ statusCode: res.statusCode, headers, body: data || '{}' });
       });
     });
 
     req.on('error', (e) => {
-      console.error('[asaas] request error:', e.message);
+      console.error('[asaas] ERRO na requisição:', e.message);
       resolve({
         statusCode: 500,
         headers,
@@ -59,7 +80,7 @@ exports.handler = async (event) => {
       });
     });
 
-    if (event.body) req.write(event.body);
+    if (bodyStr) req.write(bodyStr);
     req.end();
   });
 };
