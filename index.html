@@ -335,19 +335,25 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 const SENHA_PADRAO = 'admin123';
 let sessao = null;
 
-async function storageGet(tipo, apiKey) {
-  try {
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(apiKey)}&tipo=${tipo}`, { signal: controller.signal });
-    clearTimeout(tid);
-    if (res.ok) {
-      const data = await res.json();
-      if (data !== null) { localSet(tipo, data, apiKey); return data; }
-    }
-  } catch(e) {}
-  return localGet(tipo, apiKey);
+const STORAGE_URL = '/.netlify/functions/storage';
+
+function mostrarAvisoStorage(status, errorCode) {
+  if (document.getElementById('storage-warn')) return;
+  const ref = document.querySelector('.topbar');
+  if (!ref) return;
+  const w = document.createElement('div');
+  w.id = 'storage-warn';
+  w.style.cssText = 'background:#FEF3C7;color:#92400E;font-size:12px;font-weight:500;padding:8px 20px;text-align:center;position:sticky;top:60px;z-index:99;border-bottom:1px solid #FDE68A;';
+  const msgs = {
+    storage_not_configured: '⚠️ Nuvem não configurada — verifique CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID e CF_KV_TOKEN no painel do Netlify.',
+    get_failed: '⚠️ Falha ao ler dados da nuvem — credenciais Cloudflare KV podem estar erradas.',
+    set_failed: '⚠️ Falha ao salvar na nuvem — dados só ficam neste dispositivo. Verifique credenciais Cloudflare KV.',
+  };
+  w.textContent = msgs[errorCode] || `⚠️ Erro de armazenamento (HTTP ${status}) — dados só ficam neste dispositivo.`;
+  ref.insertAdjacentElement('afterend', w);
 }
+
+function storageKey(tipo, apiKey) {
   const id = (apiKey || '').replace(/[^a-zA-Z0-9]/g, '').slice(-16) || 'default';
   return 'ss_' + tipo + '_' + id;
 }
@@ -374,8 +380,14 @@ async function storageGet(tipo, apiKey) {
     if (res.ok) {
       const data = await res.json();
       if (data !== null) { localSet(tipo, data, apiKey); return data; }
+      return null;
     }
-  } catch(e) {}
+    const err = await res.json().catch(() => ({}));
+    console.error('[storage] GET falhou:', res.status, err);
+    mostrarAvisoStorage(res.status, err.error || '');
+  } catch(e) {
+    console.error('[storage] GET exception:', e.message);
+  }
   return localGet(tipo, apiKey);
 }
 
@@ -383,12 +395,19 @@ async function storageSet(tipo, dados) {
   if (!sessao) return;
   localSet(tipo, dados, sessao.apiKey);
   try {
-    await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(sessao.apiKey)}&tipo=${tipo}`, {
+    const res = await fetch(`${STORAGE_URL}?_token=${encodeURIComponent(sessao.apiKey)}&tipo=${tipo}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados)
     });
-  } catch(e) {}
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('[storage] SET falhou:', res.status, err);
+      mostrarAvisoStorage(res.status, err.error || '');
+    }
+  } catch(e) {
+    console.error('[storage] SET exception:', e.message);
+  }
 }
 
 function carregarCfgGlobal() {
@@ -432,7 +451,6 @@ async function fazerLogin() {
     storageGet('hoteis', apiKey)
   ]);
 
-  // Migração: se KV vazio mas localStorage tem dados (pré-rotação do token), sobe para nuvem
   const histLocal = localGet('hist', apiKey);
   const hoteisLocal = localGet('hoteis', apiKey);
   if (!historico && histLocal && histLocal.length > 0) storageSet('hist', histLocal);
@@ -642,7 +660,7 @@ async function salvarHotel() {
 }
 
 function usarHotel(id) {
-  const hoteis = (await storageGet('hoteis', sessao.apiKey)) || localGet('hoteis', sessao.apiKey) || [];
+  const hoteis = localGet('hoteis', sessao.apiKey) || [];
   const h = hoteis.find(x => x.id === id);
   if (!h) return;
   document.getElementById('r-hotel').value = h.nome;
