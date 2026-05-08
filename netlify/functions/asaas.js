@@ -1,40 +1,10 @@
 const https = require('https');
 
-const CF_ACCOUNT = process.env.CF_ACCOUNT_ID;
-const CF_NAMESPACE = process.env.CF_KV_NAMESPACE_ID;
-const CF_TOKEN = process.env.CF_KV_TOKEN;
-
-function kvRequest(method, key, bodyStr) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('KV timeout after 5s')), 5000);
-    const path = `/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces/${CF_NAMESPACE}/values/${encodeURIComponent(key)}`;
-    const opts = {
-      hostname: 'api.cloudflare.com',
-      port: 443,
-      path,
-      method,
-      headers: { 'Authorization': `Bearer ${CF_TOKEN}` }
-    };
-    if (bodyStr !== undefined) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.headers['Content-Length'] = Buffer.byteLength(bodyStr);
-    }
-    const req = https.request(opts, (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => { clearTimeout(timer); resolve({ status: res.statusCode, body: data }); });
-    });
-    req.on('error', (e) => { clearTimeout(timer); reject(e); });
-    if (bodyStr !== undefined) req.write(bodyStr);
-    req.end();
-  });
-}
-
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Content-Type': 'application/json'
   };
 
@@ -42,55 +12,66 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers, body: '' };
   }
 
-  if (!CF_ACCOUNT || !CF_NAMESPACE || !CF_TOKEN) {
-    console.error('[storage] Env vars ausentes: CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID, CF_KV_TOKEN');
-    return { statusCode: 503, headers, body: JSON.stringify({ error: 'storage_not_configured' }) };
+  const params = event.queryStringParameters || {};
+  const apiKey = params._token || '';
+  const env = params._env || 'sandbox';
+  const asaasPath = params._path || '/';
+
+  const qs = new URLSearchParams(params);
+  qs.delete('_token');
+  qs.delete('_env');
+  qs.delete('_path');
+  const qsStr = qs.toString();
+
+  const host = env === 'production' ? 'api.asaas.com' : 'sandbox.asaas.com';
+  const targetPath = '/api/v3' + asaasPath + (qsStr ? '?' + qsStr : '');
+
+  let bodyStr = '';
+  if (event.body) {
+    bodyStr = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString('utf8')
+      : event.body;
   }
 
-  const { _token: token, tipo } = event.queryStringParameters || {};
-  if (!token || !['hist', 'hoteis'].includes(tipo)) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid params' }) };
-  }
+  console.log('[asaas] method:', event.httpMethod, '| path:', targetPath);
+  console.log('[asaas] apiKey present:', !!apiKey, '| length:', apiKey.length);
+  console.log('[asaas] body:', bodyStr || '(vazio)');
 
-  const id = token.replace(/[^a-zA-Z0-9]/g, '').slice(-16) || 'default';
-  const kvKey = `${tipo}_${id}`;
+  return new Promise((resolve) => {
+    const reqHeaders = {
+      'Content-Type': 'application/json',
+      'access_token': apiKey,
+      'User-Agent': 'StaySplit/1.0'
+    };
+    if (bodyStr) reqHeaders['Content-Length'] = Buffer.byteLength(bodyStr);
 
-  console.log('[storage] method:', event.httpMethod, '| kvKey:', kvKey);
+    const options = {
+      hostname: host,
+      port: 443,
+      path: targetPath,
+      method: event.httpMethod,
+      headers: reqHeaders
+    };
 
-  if (event.httpMethod === 'GET') {
-    try {
-      const res = await kvRequest('GET', kvKey);
-      console.log('[storage] KV GET status:', res.status, '| body:', res.body.slice(0, 200));
-      if (res.status === 404) {
-        return { statusCode: 200, headers, body: JSON.stringify(null) };
-      }
-      if (res.status !== 200) {
-        console.error('[storage] KV GET error:', res.status, res.body.slice(0, 200));
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'get_failed', detail: res.body }) };
-      }
-      return { statusCode: 200, headers, body: res.body };
-    } catch (e) {
-      console.error('[storage] GET exception:', e.message);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'get_failed', detail: e.message }) };
-    }
-  }
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        console.log('[asaas] status:', res.statusCode, '| body:', data);
+        resolve({ statusCode: res.statusCode, headers, body: data || '{}' });
+      });
+    });
 
-  if (event.httpMethod === 'POST') {
-    try {
-      const bodyStr = event.body || 'null';
-      console.log('[storage] KV PUT body:', bodyStr.slice(0, 200));
-      const res = await kvRequest('PUT', kvKey, bodyStr);
-      console.log('[storage] KV PUT status:', res.status, '| body:', res.body.slice(0, 200));
-      if (res.status < 200 || res.status > 299) {
-        console.error('[storage] KV PUT error:', res.status, res.body.slice(0, 200));
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'set_failed', detail: res.body }) };
-      }
-      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
-    } catch (e) {
-      console.error('[storage] POST exception:', e.message);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'set_failed', detail: e.message }) };
-    }
-  }
+    req.on('error', (e) => {
+      console.error('[asaas] erro:', e.message);
+      resolve({
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ errors: [{ code: 'proxy_error', description: e.message }] })
+      });
+    });
 
-  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+    if (bodyStr) req.write(bodyStr);
+    req.end();
+  });
 };
