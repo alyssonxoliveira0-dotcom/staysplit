@@ -615,7 +615,6 @@ async function gerarCobranca() {
     loading.classList.remove('show');
 
     const invoiceUrl = cob.invoiceUrl || cob.bankSlipUrl || '';
-
     document.getElementById('result-url').textContent = invoiceUrl;
     document.getElementById('result-valor').textContent = fmt(valor);
     document.getElementById('result-tipo').textContent = labelPagamento(pagamentoSelecionado);
@@ -634,12 +633,6 @@ async function gerarCobranca() {
       criadoEm: new Date().toLocaleString('pt-BR')
     };
     try {
-      const histAtual = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey) || [];
-      histAtual.unshift(novoItem);
-      await storageSet('hist', histAtual.slice(0, 50));
-    } catch(histErr) {
-      console.error('Histórico:', histErr.message);
-    }    try {
       const rawHist = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey);
       const histAtual = Array.isArray(rawHist) ? rawHist : [];
       histAtual.unshift(novoItem);
@@ -647,9 +640,6 @@ async function gerarCobranca() {
     } catch(histErr) {
       console.error('Histórico:', histErr.message);
     }
-
-    document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
-    cobrancaEmAndamento = false;
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
     cobrancaEmAndamento = false;
