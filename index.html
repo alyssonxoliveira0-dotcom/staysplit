@@ -633,9 +633,23 @@ async function gerarCobranca() {
       tipo: pagamentoSelecionado, url: invoiceUrl,
       criadoEm: new Date().toLocaleString('pt-BR')
     };
-    const histAtual = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey) || [];
-    histAtual.unshift(novoItem);
-    await storageSet('hist', histAtual.slice(0, 50));
+    try {
+      const histAtual = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey) || [];
+      histAtual.unshift(novoItem);
+      await storageSet('hist', histAtual.slice(0, 50));
+    } catch(histErr) {
+      console.error('Histórico:', histErr.message);
+    }    try {
+      const rawHist = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey);
+      const histAtual = Array.isArray(rawHist) ? rawHist : [];
+      histAtual.unshift(novoItem);
+      await storageSet('hist', histAtual.slice(0, 50));
+    } catch(histErr) {
+      console.error('Histórico:', histErr.message);
+    }
+
+    document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+    cobrancaEmAndamento = false;
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
     cobrancaEmAndamento = false;
