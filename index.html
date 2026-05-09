@@ -334,6 +334,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 <script>
 const SENHA_PADRAO = 'admin123';
 let sessao = null;
+let cobrancaEmAndamento = false;
 
 const STORAGE_URL = '/.netlify/functions/storage';
 
@@ -574,6 +575,9 @@ async function gerarCobranca() {
   if (!wallet) { mostrarAlerta(errEl,'Informe o WalletId do parceiro.'); return; }
   if (!pct || pct <= 0 || pct >= 100) { mostrarAlerta(errEl,'Percentual inválido (1 a 99).'); return; }
 
+  if (cobrancaEmAndamento) return;
+  cobrancaEmAndamento = true;
+
   const loading = document.getElementById('loading-nova');
   const btnGerar = document.getElementById('btn-gerar');
   loading.classList.add('show');
@@ -630,15 +634,17 @@ async function gerarCobranca() {
       tipo: pagamentoSelecionado, url: invoiceUrl,
       criadoEm: new Date().toLocaleString('pt-BR')
     };
-    const histAtual = localGet('hist', sessao.apiKey) || [];
+    const histAtual = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey) || [];
     histAtual.unshift(novoItem);
     await storageSet('hist', histAtual.slice(0, 50));
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+    cobrancaEmAndamento = false;
 
   } catch(e) {
     loading.classList.remove('show');
     btnGerar.disabled = false;
+    cobrancaEmAndamento = false;
     infoEl.classList.remove('show');
     mostrarAlerta(errEl, 'Erro: ' + e.message);
   }
@@ -768,6 +774,9 @@ function copiarLink() {
 }
 
 function novaCobranca() {
+  cobrancaEmAndamento = false;
+  const btnGerar = document.getElementById('btn-gerar');
+  if (btnGerar) btnGerar.disabled = false;
   ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
