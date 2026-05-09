@@ -639,12 +639,10 @@ async function gerarCobranca() {
 
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
     cobrancaEmAndamento = false;
-    btnGerar.disabled = false;
- 
 
   } catch(e) {
     loading.classList.remove('show');
-  
+    btnGerar.disabled = false;
     cobrancaEmAndamento = false;
     infoEl.classList.remove('show');
     mostrarAlerta(errEl, 'Erro: ' + e.message);
