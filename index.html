@@ -107,12 +107,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .cob-meta { font-size: 12px; color: var(--bark); margin-top: 3px; }
 .cob-valor { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--earth); }
 .cob-status { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
-.status-pending { background: var(--gold-light); color: var(--gold); }
+.status-pending  { background: var(--gold-light); color: var(--gold); }
+.status-paid     { background: var(--success-light); color: var(--success); }
+.status-overdue  { background: #FEE2E2; color: #991B1B; }
+.status-refunded { background: #F3F4F6; color: #6B7280; }
 .cob-link-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .cob-link-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .stat-card { background: var(--cream); border-radius: 12px; padding: 18px 20px; }
+.stat-card.destaque { background: var(--success-light); }
+.stat-card.destaque .stat-value { color: var(--success); }
 .stat-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--deep); }
 
@@ -128,6 +133,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .alert.show { display: block; }
 .alert-error { background: #FEE2E2; border: 1.5px solid #FCA5A5; color: #991B1B; }
 .alert-info { background: var(--accent-light); border: 1.5px solid #F0A882; color: #7C2D12; }
+
+.sinal-box { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 14px 16px; margin-top: 12px; }
+.sinal-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--earth); font-weight: 500; }
+.sinal-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+.action-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.btn-sm { padding: 8px 16px; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.btn-outline { background: none; border: 1.5px solid var(--sand); color: var(--bark); }
+.btn-outline:hover { border-color: var(--bark); color: var(--deep); }
+.btn-outline:disabled { opacity: .5; cursor: not-allowed; }
+.btn-export { background: var(--success); color: var(--white); }
+.btn-export:hover { background: #1d4d38; }
 
 @media (max-width: 600px) {
   .main-content { padding: 20px 16px; }
@@ -186,6 +203,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       <button class="tab-btn" onclick="mudarTab('config')">Configurações</button>
     </div>
 
+    <!-- TAB: NOVA COBRANÇA -->
     <div class="tab-panel active" id="tab-nova">
       <div class="card">
         <div class="card-title">Gerar cobrança de reserva</div>
@@ -212,7 +230,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         <div class="grid-3">
           <div class="form-group"><label>Check-in</label><input type="date" id="r-checkin"></div>
           <div class="form-group"><label>Check-out</label><input type="date" id="r-checkout"></div>
-          <div class="form-group"><label>Valor total (R$)</label><input type="number" id="r-valor" placeholder="1000.00" min="10" step="0.01" oninput="atualizarPreview()"></div>
+          <div class="form-group"><label>Valor total da hospedagem (R$)</label><input type="number" id="r-valor" placeholder="1000.00" min="10" step="0.01" oninput="atualizarPreview()"></div>
+        </div>
+
+        <div class="sinal-box">
+          <label class="sinal-toggle">
+            <input type="checkbox" id="r-sinal-check" onchange="toggleSinal()">
+            Pagamento parcial — hóspede paga apenas um sinal agora
+          </label>
+          <div id="sinal-wrap" style="display:none;margin-top:12px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Valor do sinal (R$) — restante pago no check-in</label>
+              <input type="number" id="r-valor-sinal" placeholder="Ex: 500.00" min="1" step="0.01">
+            </div>
+          </div>
         </div>
 
         <div class="section-sep"></div>
@@ -265,16 +296,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
           <button class="copy-btn" onclick="copiarLink()">Copiar</button>
         </div>
         <div class="result-details">
-          <div class="result-detail-item"><div class="result-detail-label">Valor</div><div class="result-detail-value" id="result-valor"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">Valor cobrado</div><div class="result-detail-value" id="result-valor"></div></div>
           <div class="result-detail-item"><div class="result-detail-label">Pagamento</div><div class="result-detail-value" id="result-tipo"></div></div>
           <div class="result-detail-item"><div class="result-detail-label">Comissão</div><div class="result-detail-value" id="result-comissao"></div></div>
           <div class="result-detail-item"><div class="result-detail-label">ID</div><div class="result-detail-value" id="result-id" style="font-size:12px;font-family:monospace"></div></div>
         </div>
+        <div id="result-sinal-info" style="display:none;margin-top:12px;background:var(--gold-light);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--earth);font-weight:500"></div>
         <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">📱 Enviar por WhatsApp</a>
         <button class="nova-cob-btn" onclick="novaCobranca()">+ Nova cobrança</button>
       </div>
     </div>
 
+    <!-- TAB: HOTÉIS -->
     <div class="tab-panel" id="tab-hoteis">
       <div class="card">
         <div class="card-title">Hotéis e pousadas</div>
@@ -292,27 +325,42 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
       </div>
     </div>
 
+    <!-- TAB: HISTÓRICO -->
     <div class="tab-panel" id="tab-historico">
       <div class="card">
-        <div class="card-title">Histórico de cobranças</div>
-        <div class="card-sub">Cobranças geradas por esta conta.</div>
+        <div class="action-bar">
+          <div>
+            <div class="card-title" style="margin-bottom:2px">Histórico de cobranças</div>
+            <div style="font-size:13px;color:var(--bark)">Cobranças geradas por esta conta.</div>
+          </div>
+          <button class="btn-sm btn-outline" id="btn-atualizar-status" onclick="atualizarStatusCobrancas()">↻ Atualizar status</button>
+        </div>
         <div id="historico-lista"></div>
       </div>
     </div>
 
+    <!-- TAB: FINANCEIRO -->
     <div class="tab-panel" id="tab-financeiro">
       <div class="card">
-        <div class="card-title">Painel financeiro</div>
-        <div class="card-sub">Resumo das cobranças desta conta.</div>
+        <div class="action-bar">
+          <div>
+            <div class="card-title" style="margin-bottom:2px">Painel financeiro</div>
+            <div style="font-size:13px;color:var(--bark)">Resumo das cobranças desta conta.</div>
+          </div>
+          <button class="btn-sm btn-export" onclick="exportarCSV()">⬇ Exportar Excel</button>
+        </div>
         <div class="stat-grid">
           <div class="stat-card"><div class="stat-label">Total cobranças</div><div class="stat-value" id="fin-total">0</div></div>
           <div class="stat-card"><div class="stat-label">Volume total</div><div class="stat-value" id="fin-volume">R$ 0</div></div>
+          <div class="stat-card destaque"><div class="stat-label">Volume pago</div><div class="stat-value" id="fin-pago">R$ 0</div></div>
           <div class="stat-card"><div class="stat-label">Comissões pagas</div><div class="stat-value" id="fin-comissao">R$ 0</div></div>
-          <div class="stat-card"><div class="stat-label">Sua receita</div><div class="stat-value" id="fin-receita">R$ 0</div></div>
+          <div class="stat-card destaque"><div class="stat-label">Sua receita confirmada</div><div class="stat-value" id="fin-receita-paga">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Receita projetada</div><div class="stat-value" id="fin-receita">R$ 0</div></div>
         </div>
       </div>
     </div>
 
+    <!-- TAB: CONFIG -->
     <div class="tab-panel" id="tab-config">
       <div class="card">
         <div class="card-title">Configurações</div>
@@ -409,6 +457,20 @@ async function storageSet(tipo, dados) {
   } catch(e) {
     console.error('[storage] SET exception:', e.message);
   }
+}
+
+function mapearStatus(status) {
+  const map = {
+    PENDING:              { label: 'Aguardando',  css: 'status-pending' },
+    RECEIVED:             { label: 'Pago',         css: 'status-paid'    },
+    CONFIRMED:            { label: 'Pago',         css: 'status-paid'    },
+    RECEIVED_IN_CASH:     { label: 'Pago',         css: 'status-paid'    },
+    OVERDUE:              { label: 'Vencido',      css: 'status-overdue' },
+    REFUNDED:             { label: 'Estornado',    css: 'status-refunded'},
+    CHARGEBACK_REQUESTED: { label: 'Chargeback',   css: 'status-overdue' },
+    CHARGEBACK_DISPUTE:   { label: 'Disputa',      css: 'status-overdue' },
+  };
+  return map[status] || { label: 'Aguardando', css: 'status-pending' };
 }
 
 function carregarCfgGlobal() {
@@ -510,7 +572,7 @@ async function asaasAPI(method, path, body) {
   return data;
 }
 
-function mudarTab(id) {
+async function mudarTab(id) {
   const ids = ['nova','hoteis','historico','financeiro','config'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ids[i]===id));
   ids.forEach(i => {
@@ -518,9 +580,18 @@ function mudarTab(id) {
     if (p) p.classList.toggle('active', i===id);
   });
   if (!sessao) return;
-  if (id === 'historico') renderHistorico(localGet('hist', sessao.apiKey) || []);
-  if (id === 'financeiro') renderFinanceiro(localGet('hist', sessao.apiKey) || []);
-  if (id === 'hoteis') renderHoteis(localGet('hoteis', sessao.apiKey) || []);
+  if (id === 'historico') {
+    const hist = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey) || [];
+    renderHistorico(hist);
+  }
+  if (id === 'financeiro') {
+    const hist = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey) || [];
+    renderFinanceiro(hist);
+  }
+  if (id === 'hoteis') {
+    const hoteis = (await storageGet('hoteis', sessao.apiKey)) || localGet('hoteis', sessao.apiKey) || [];
+    renderHoteis(hoteis);
+  }
 }
 
 let pagamentoSelecionado = 'PIX';
@@ -530,6 +601,11 @@ function selecionarPagamento(tipo) {
   document.getElementById('pt-'+tipo).classList.add('selected');
   document.getElementById('parcelas-wrap').style.display = tipo === 'CREDIT_CARD' ? 'block' : 'none';
   atualizarPreview();
+}
+
+function toggleSinal() {
+  const checked = document.getElementById('r-sinal-check').checked;
+  document.getElementById('sinal-wrap').style.display = checked ? 'block' : 'none';
 }
 
 function atualizarPreview() {
@@ -556,10 +632,13 @@ async function gerarCobranca() {
   const quarto = document.getElementById('r-quarto').value.trim();
   const checkin = document.getElementById('r-checkin').value;
   const checkout = document.getElementById('r-checkout').value;
-  const valor = parseFloat(document.getElementById('r-valor').value);
+  const valorTotal = parseFloat(document.getElementById('r-valor').value);
   const wallet = document.getElementById('r-wallet').value.trim();
   const pct = parseFloat(document.getElementById('r-comissao').value);
   const parcelas = parseInt(document.getElementById('r-parcelas').value) || 1;
+  const isSinal = document.getElementById('r-sinal-check').checked;
+  const valorSinal = isSinal ? parseFloat(document.getElementById('r-valor-sinal').value) : null;
+  const valorCobranca = isSinal ? valorSinal : valorTotal;
 
   const errEl = document.getElementById('nova-error');
   const infoEl = document.getElementById('nova-info');
@@ -571,7 +650,9 @@ async function gerarCobranca() {
   if (email && !email.includes('@')) { mostrarAlerta(errEl,'E-mail inválido.'); return; }
   if (!hotel) { mostrarAlerta(errEl,'Informe o nome do hotel.'); return; }
   if (!checkin || !checkout) { mostrarAlerta(errEl,'Informe as datas.'); return; }
-  if (!valor || valor < 10) { mostrarAlerta(errEl,'Valor mínimo R$ 10,00.'); return; }
+  if (!valorTotal || valorTotal < 10) { mostrarAlerta(errEl,'Valor mínimo R$ 10,00.'); return; }
+  if (isSinal && (!valorSinal || valorSinal < 1)) { mostrarAlerta(errEl,'Informe o valor do sinal.'); return; }
+  if (isSinal && valorSinal >= valorTotal) { mostrarAlerta(errEl,'Valor do sinal deve ser menor que o total da hospedagem.'); return; }
   if (!wallet) { mostrarAlerta(errEl,'Informe o WalletId do parceiro.'); return; }
   if (!pct || pct <= 0 || pct >= 100) { mostrarAlerta(errEl,'Percentual inválido (1 a 99).'); return; }
 
@@ -595,18 +676,23 @@ async function gerarCobranca() {
     dueDate.setDate(dueDate.getDate() + 1);
     const dueDateStr = dueDate.toISOString().split('T')[0];
 
+    const descricaoBase = `Reserva ${hotel}${quarto?' — '+quarto:''} | ${checkin} → ${checkout}`;
+    const descricao = isSinal
+      ? `SINAL · ${descricaoBase} | Restante: ${fmt(valorTotal - valorSinal)} no check-in`
+      : descricaoBase;
+
     const cobBody = {
       customer: cliente.id,
       billingType: pagamentoSelecionado,
-      value: valor,
+      value: valorCobranca,
       dueDate: dueDateStr,
-      description: `Reserva ${hotel}${quarto?' — '+quarto:''} | ${checkin} → ${checkout}`,
+      description: descricao,
       splits: [{ walletId: wallet, percentualValue: pct }]
     };
 
     if (pagamentoSelecionado === 'CREDIT_CARD' && parcelas > 1) {
       cobBody.installmentCount = parcelas;
-      cobBody.installmentValue = parseFloat((valor/parcelas).toFixed(2));
+      cobBody.installmentValue = parseFloat((valorCobranca/parcelas).toFixed(2));
     }
 
     const cob = await asaasAPI('POST', '/lean/payments', cobBody);
@@ -616,20 +702,31 @@ async function gerarCobranca() {
 
     const invoiceUrl = cob.invoiceUrl || cob.bankSlipUrl || '';
     document.getElementById('result-url').textContent = invoiceUrl;
-    document.getElementById('result-valor').textContent = fmt(valor);
+    document.getElementById('result-valor').textContent = fmt(valorCobranca);
     document.getElementById('result-tipo').textContent = labelPagamento(pagamentoSelecionado);
     document.getElementById('result-comissao').textContent = pct + '% → parceiro';
     document.getElementById('result-id').textContent = cob.id;
     document.getElementById('result-box').classList.add('show');
 
+    const sinalInfoEl = document.getElementById('result-sinal-info');
+    if (isSinal) {
+      sinalInfoEl.style.display = 'block';
+      sinalInfoEl.textContent = `Sinal: ${fmt(valorSinal)} cobrado agora · Restante: ${fmt(valorTotal - valorSinal)} a pagar no check-in`;
+    } else {
+      sinalInfoEl.style.display = 'none';
+    }
+
     const wfone = fone.replace(/\D/g,'');
-    const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valor)}`);
+    const msgSinal = isSinal ? ` (sinal de ${fmt(valorSinal)} — restante ${fmt(valorTotal - valorSinal)} no check-in)` : '';
+    const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valorCobranca)}${msgSinal}`);
     document.getElementById('whatsapp-btn').href = `https://wa.me/55${wfone}?text=${msg}`;
 
     const novoItem = {
       id: cob.id, hotel, quarto, checkin, checkout,
-      hospede: nome, valor, pct, wallet,
-      tipo: pagamentoSelecionado, url: invoiceUrl,
+      hospede: nome, valor: valorCobranca, valorTotal,
+      sinal: isSinal, valorRestante: isSinal ? valorTotal - valorSinal : 0,
+      pct, wallet, tipo: pagamentoSelecionado, url: invoiceUrl,
+      status: 'PENDING',
       criadoEm: new Date().toLocaleString('pt-BR')
     };
     try {
@@ -651,6 +748,30 @@ async function gerarCobranca() {
     infoEl.classList.remove('show');
     mostrarAlerta(errEl, 'Erro: ' + e.message);
   }
+}
+
+async function atualizarStatusCobrancas() {
+  const btn = document.getElementById('btn-atualizar-status');
+  btn.disabled = true;
+  btn.textContent = 'Atualizando...';
+  try {
+    const rawHist = (await storageGet('hist', sessao.apiKey)) || localGet('hist', sessao.apiKey) || [];
+    for (const item of rawHist) {
+      try {
+        const cob = await asaasAPI('GET', '/payments/' + item.id);
+        item.status = cob.status;
+      } catch(e) {
+        console.error('Status ' + item.id + ':', e.message);
+      }
+    }
+    await storageSet('hist', rawHist);
+    renderHistorico(rawHist);
+    renderFinanceiro(rawHist);
+  } catch(e) {
+    console.error('Atualizar status:', e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '↻ Atualizar status';
 }
 
 async function salvarHotel() {
@@ -712,27 +833,71 @@ function renderHistorico(historico) {
     el.innerHTML = '<div class="historico-empty"><div style="font-size:36px">🏨</div><p style="margin-top:8px;font-size:14px">Nenhuma cobrança gerada ainda.</p></div>';
     return;
   }
-  el.innerHTML = historico.map(h => `
-    <div class="cobranca-item">
-      <div style="flex:1">
-        <div class="cob-hotel">${h.hotel}${h.quarto?' — '+h.quarto:''}</div>
-        <div class="cob-meta">${h.hospede} · ${h.checkin} → ${h.checkout} · ${h.pct}% comissão · ${h.criadoEm}</div>
+  el.innerHTML = historico.map(h => {
+    const { label, css } = mapearStatus(h.status);
+    const sinalTag = h.sinal ? `<span style="font-size:11px;background:var(--gold-light);color:var(--gold);padding:2px 8px;border-radius:10px;margin-left:6px;font-weight:600">SINAL</span>` : '';
+    const sinalMeta = h.sinal ? ` · Restante: ${fmt(h.valorRestante)} no check-in` : '';
+    return `
+      <div class="cobranca-item">
+        <div style="flex:1">
+          <div class="cob-hotel">${h.hotel}${h.quarto?' — '+h.quarto:''}${sinalTag}</div>
+          <div class="cob-meta">${h.hospede} · ${h.checkin} → ${h.checkout} · ${h.pct}% comissão${sinalMeta} · ${h.criadoEm}</div>
+        </div>
+        <div class="cob-valor">${fmt(h.valor)}</div>
+        <span class="cob-status ${css}">${label}</span>
+        <button class="cob-link-btn" onclick="window.open('${h.url}','_blank')">Abrir link</button>
       </div>
-      <div class="cob-valor">${fmt(h.valor)}</div>
-      <span class="cob-status status-pending">Aguardando</span>
-      <button class="cob-link-btn" onclick="window.open('${h.url}','_blank')">Abrir link</button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function renderFinanceiro(historico) {
   const h = historico || [];
-  const volume = h.reduce((s,x) => s+x.valor, 0);
-  const comissoes = h.reduce((s,x) => s+(x.valor*x.pct/100), 0);
+  const statusPago = ['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'];
+  const pagos = h.filter(x => statusPago.includes(x.status));
+  const volume = h.reduce((s,x) => s+(x.valor||0), 0);
+  const volumePago = pagos.reduce((s,x) => s+(x.valor||0), 0);
+  const comissoes = h.reduce((s,x) => s+((x.valor||0)*(x.pct||0)/100), 0);
+  const comissoesPagas = pagos.reduce((s,x) => s+((x.valor||0)*(x.pct||0)/100), 0);
   document.getElementById('fin-total').textContent = h.length;
   document.getElementById('fin-volume').textContent = fmt(volume);
-  document.getElementById('fin-comissao').textContent = fmt(comissoes);
+  document.getElementById('fin-pago').textContent = fmt(volumePago);
+  document.getElementById('fin-comissao').textContent = fmt(comissoesPagas);
+  document.getElementById('fin-receita-paga').textContent = fmt(volumePago - comissoesPagas);
   document.getElementById('fin-receita').textContent = fmt(volume - comissoes);
+}
+
+function exportarCSV() {
+  const hist = localGet('hist', sessao.apiKey) || [];
+  if (!hist.length) { alert('Nenhum dado para exportar.'); return; }
+  const cab = ['ID','Hotel','Quarto','Hóspede','Check-in','Check-out','Valor Cobrado','Valor Total Hospedagem','Sinal','Tipo Pagamento','Comissão %','Comissão R$','Sua Receita','Status','Data'];
+  const linhas = hist.map(h => {
+    const valorCobrado = h.valor || 0;
+    const valorTotal = h.valorTotal || valorCobrado;
+    const comissaoR = valorCobrado * (h.pct || 0) / 100;
+    const { label: statusLabel } = mapearStatus(h.status);
+    return [
+      h.id, h.hotel, h.quarto||'', h.hospede,
+      h.checkin, h.checkout,
+      valorCobrado.toFixed(2).replace('.',','),
+      valorTotal.toFixed(2).replace('.',','),
+      h.sinal ? 'Sim' : 'Não',
+      labelPagamento(h.tipo),
+      h.pct,
+      comissaoR.toFixed(2).replace('.',','),
+      (valorCobrado - comissaoR).toFixed(2).replace('.',','),
+      statusLabel,
+      h.criadoEm
+    ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';');
+  });
+  const csv = '\uFEFF' + [cab.map(c=>`"${c}"`).join(';'), ...linhas].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `staysplit_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function salvarConfig() {
@@ -780,11 +945,14 @@ function novaCobranca() {
   cobrancaEmAndamento = false;
   const btnGerar = document.getElementById('btn-gerar');
   if (btnGerar) btnGerar.disabled = false;
-  ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor'].forEach(id => {
+  ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor','r-valor-sinal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  document.getElementById('r-sinal-check').checked = false;
+  document.getElementById('sinal-wrap').style.display = 'none';
   document.getElementById('result-box').classList.remove('show');
+  document.getElementById('result-sinal-info').style.display = 'none';
   document.getElementById('nova-error').classList.remove('show');
   document.getElementById('nova-info').classList.remove('show');
   document.getElementById('split-preview').style.display = 'none';
