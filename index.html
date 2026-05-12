@@ -248,7 +248,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
           <div id="sinal-wrap" style="display:none;margin-top:12px">
             <div class="form-group" style="margin-bottom:0">
               <label>Valor do sinal (R$) — restante pago no check-in</label>
-              <input type="number" id="r-valor-sinal" placeholder="Ex: 500.00" min="1" step="0.01">
+              <input type="number" id="r-valor-sinal" placeholder="Ex: 500.00" min="1" step="0.01" oninput="atualizarPreview()">
             </div>
           </div>
         </div>
@@ -280,7 +280,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
         </div>
 
         <div class="split-preview" id="split-preview" style="display:none">
-          <div class="split-preview-title">Distribuição estimada</div>
+          <div class="split-preview-title">Distribuição estimada<span id="split-base-label" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--earth);margin-left:6px;font-size:11px"></span></div>
           <div class="split-bar-wrap">
             <div class="split-bar-voce" id="bar-voce" style="width:90%"></div>
             <div class="split-bar-parceiro" id="bar-parceiro" style="width:10%"></div>
@@ -624,20 +624,33 @@ function selecionarPagamento(tipo) {
 function toggleSinal() {
   const checked = document.getElementById('r-sinal-check').checked;
   document.getElementById('sinal-wrap').style.display = checked ? 'block' : 'none';
+  atualizarPreview();
 }
 
 function atualizarPreview() {
-  const valor = parseFloat(document.getElementById('r-valor').value) || 0;
+  const valorTotal = parseFloat(document.getElementById('r-valor').value) || 0;
+  const isSinal = document.getElementById('r-sinal-check').checked;
+  const valorSinal = isSinal ? (parseFloat(document.getElementById('r-valor-sinal').value) || 0) : 0;
+  const valorCobranca = (isSinal && valorSinal > 0) ? valorSinal : valorTotal;
   const pct = parseFloat(document.getElementById('r-comissao').value) || 0;
   const wallet = document.getElementById('r-wallet').value.trim();
   const preview = document.getElementById('split-preview');
-  if (valor > 0 && pct > 0 && wallet) {
-    const parc = valor * pct / 100;
+  const baseLabel = document.getElementById('split-base-label');
+  if (valorCobranca > 0 && pct > 0 && wallet) {
+    const parc = valorCobranca * pct / 100;
     preview.style.display = 'block';
     document.getElementById('bar-voce').style.width = (100-pct)+'%';
     document.getElementById('bar-parceiro').style.width = pct+'%';
-    document.getElementById('legend-voce').textContent = fmt(valor - parc);
+    document.getElementById('legend-voce').textContent = fmt(valorCobranca - parc);
     document.getElementById('legend-parc').textContent = fmt(parc);
+    if (baseLabel) {
+      if (isSinal && valorSinal > 0 && valorTotal > 0) {
+        const pct100 = Math.round(valorSinal / valorTotal * 100);
+        baseLabel.textContent = `— sobre ${fmt(valorSinal)} cobrados agora (${pct100}% do total de ${fmt(valorTotal)})`;
+      } else {
+        baseLabel.textContent = '';
+      }
+    }
   } else { preview.style.display = 'none'; }
 }
 
