@@ -356,14 +356,45 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
           </div>
           <button class="btn-sm btn-export" onclick="exportarCSV()">⬇ Exportar Excel</button>
         </div>
-        <div class="stat-grid">
+
+        <p style="font-size:11px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Visão geral</p>
+        <div class="grid-2" style="margin-bottom:24px">
           <div class="stat-card"><div class="stat-label">Total cobranças</div><div class="stat-value" id="fin-total">0</div></div>
-          <div class="stat-card"><div class="stat-label">Volume total</div><div class="stat-value" id="fin-volume">R$ 0</div></div>
-          <div class="stat-card destaque"><div class="stat-label">Volume pago</div><div class="stat-value" id="fin-pago">R$ 0</div></div>
-          <div class="stat-card"><div class="stat-label">Comissões pagas</div><div class="stat-value" id="fin-comissao">R$ 0</div></div>
-          <div class="stat-card destaque"><div class="stat-label">Sua receita confirmada</div><div class="stat-value" id="fin-receita-paga">R$ 0</div></div>
-          <div class="stat-card"><div class="stat-label">Receita projetada</div><div class="stat-value" id="fin-receita">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Volume total gerado</div><div class="stat-value" id="fin-volume">R$ 0</div></div>
         </div>
+
+        <p style="font-size:11px;font-weight:600;color:var(--success);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Valores recebidos</p>
+        <div style="background:var(--success-light);border:1.5px solid #95D5B2;border-radius:14px;padding:20px 24px;margin-bottom:24px">
+          <div class="grid-2" style="margin-bottom:16px">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Pago pelos hóspedes</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--deep)" id="fin-pago">R$ 0</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Comissões repassadas</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--bark)" id="fin-comissao">R$ 0</div>
+            </div>
+          </div>
+          <div style="border-top:1.5px solid #95D5B2;padding-top:16px">
+            <div style="font-size:11px;font-weight:600;color:var(--success);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Sua receita líquida</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:32px;color:var(--success)" id="fin-receita-paga">R$ 0</div>
+            <div style="font-size:12px;color:var(--success);margin-top:8px;line-height:1.6;opacity:.85">Pix e Boleto = dinheiro já creditado na sua conta · Cartão = aprovado pela operadora, disponível conforme prazo de liquidação</div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:8px">
+          <div class="stat-card" id="fin-pendente-card">
+            <div class="stat-label" id="fin-pendente-label">⏳ Aguardando pagamento</div>
+            <div class="stat-value" id="fin-pendente-valor">R$ 0</div>
+            <div style="font-size:12px;color:var(--bark);margin-top:6px" id="fin-pendente-count">0 cobranças em aberto</div>
+          </div>
+          <div class="stat-card" id="fin-vencido-card">
+            <div class="stat-label" id="fin-vencido-label">Cobranças vencidas</div>
+            <div class="stat-value" id="fin-vencido-valor">R$ 0</div>
+            <div style="font-size:12px;color:var(--bark);margin-top:6px" id="fin-vencido-count">0 cobranças</div>
+          </div>
+        </div>
+        <div id="fin-vencidas-lista" style="margin-top:4px"></div>
       </div>
     </div>
 
@@ -887,16 +918,60 @@ function renderFinanceiro(historico) {
   const h = historico || [];
   const statusPago = ['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'];
   const pagos = h.filter(x => statusPago.includes(x.status));
+  const pendentes = h.filter(x => x.status === 'PENDING');
+  const vencidos = h.filter(x => x.status === 'OVERDUE');
   const volume = h.reduce((s,x) => s+(x.valor||0), 0);
   const volumePago = pagos.reduce((s,x) => s+(x.valor||0), 0);
-  const comissoes = h.reduce((s,x) => s+((x.valor||0)*(x.pct||0)/100), 0);
   const comissoesPagas = pagos.reduce((s,x) => s+((x.valor||0)*(x.pct||0)/100), 0);
+  const volumePendente = pendentes.reduce((s,x) => s+(x.valor||0), 0);
+  const volumeVencido = vencidos.reduce((s,x) => s+(x.valor||0), 0);
+
   document.getElementById('fin-total').textContent = h.length;
   document.getElementById('fin-volume').textContent = fmt(volume);
   document.getElementById('fin-pago').textContent = fmt(volumePago);
   document.getElementById('fin-comissao').textContent = fmt(comissoesPagas);
   document.getElementById('fin-receita-paga').textContent = fmt(volumePago - comissoesPagas);
-  document.getElementById('fin-receita').textContent = fmt(volume - comissoes);
+  document.getElementById('fin-pendente-valor').textContent = fmt(volumePendente);
+  document.getElementById('fin-pendente-count').textContent = pendentes.length + (pendentes.length === 1 ? ' cobrança em aberto' : ' cobranças em aberto');
+  document.getElementById('fin-vencido-valor').textContent = fmt(volumeVencido);
+  document.getElementById('fin-vencido-count').textContent = vencidos.length + (vencidos.length === 1 ? ' cobrança' : ' cobranças');
+
+  const vencidoCard = document.getElementById('fin-vencido-card');
+  const vencidoLabel = document.getElementById('fin-vencido-label');
+  const vencidoValor = document.getElementById('fin-vencido-valor');
+  if (vencidos.length > 0) {
+    vencidoCard.style.background = '#FEE2E2';
+    vencidoLabel.style.color = '#991B1B';
+    vencidoLabel.textContent = '⚠️ Cobranças vencidas';
+    vencidoValor.style.color = '#991B1B';
+    document.getElementById('fin-vencido-count').style.color = '#991B1B';
+  } else {
+    vencidoCard.style.background = '';
+    vencidoLabel.style.color = '';
+    vencidoLabel.textContent = 'Cobranças vencidas';
+    vencidoValor.style.color = '';
+    document.getElementById('fin-vencido-count').style.color = '';
+  }
+
+  const listaEl = document.getElementById('fin-vencidas-lista');
+  if (vencidos.length > 0) {
+    listaEl.innerHTML = `
+      <p style="font-size:11px;font-weight:600;color:#991B1B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;margin-top:16px">⚠️ Ação necessária — cobranças vencidas</p>
+      ${vencidos.map(v => `
+        <div class="cobranca-item" style="border-color:#FCA5A5">
+          <div style="flex:1">
+            <div class="cob-hotel">${v.hotel}${v.quarto?' — '+v.quarto:''}</div>
+            <div class="cob-meta">${v.hospede} · ${v.checkin} → ${v.checkout} · ${v.criadoEm}</div>
+          </div>
+          <div class="cob-valor" style="color:#991B1B">${fmt(v.valor)}</div>
+          <span class="cob-status status-overdue">Vencida</span>
+          <button class="cob-link-btn" onclick="window.open('${v.url}','_blank')">Ver link</button>
+        </div>
+      `).join('')}
+    `;
+  } else {
+    listaEl.innerHTML = '';
+  }
 }
 
 function exportarCSV() {
@@ -922,7 +997,7 @@ function exportarCSV() {
       h.criadoEm
     ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';');
   });
-  const csv = '﻿' + [cab.map(c=>`"${c}"`).join(';'), ...linhas].join('\n');
+  const csv = '\uFEFF' + [cab.map(c=>`"${c}"`).join(';'), ...linhas].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
