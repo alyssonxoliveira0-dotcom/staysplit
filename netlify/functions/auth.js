@@ -1,0 +1,1253 @@
+const https = require('https');
+const crypto = require('crypto');
+
+const CF_ACCOUNT   = process.env.CF_ACCOUNT_ID;
+const CF_NAMESPACE = process.env.CF_KV_NAMESPACE_ID;
+const CF_TOKEN     = process.env.CF_KV_TOKEN;
+const RESEND_KEY   = process.env.RESEND_API_KEY;
+const FROM_EMAIL   = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+const APP_URL      = process.env.APP_URL || 'https://staysplit.netlify.app';
+
+const HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Content-Type': 'application/json'
+};
+
+function ok(data)         { return { statusCode: 200, headers: HEADERS, body: JSON.stringify(data) }; }
+function fail(code, msg)  { return { statusCode: code, headers: HEADERS, body: JSON.stringify({ error: msg }) }; }
+
+function kvReq(method, key, bodyStr) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('KV timeout')), 6000);
+    const path = `/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces/${CF_NAMESPACE}/values/${encodeURIComponent(key)}`;
+    const opts = { hostname: 'api.cloudflare.com', port: 443, path, method,
+      headers: { 'Authorization': `Bearer ${CF_TOKEN}` } };
+    if (bodyStr !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.headers['Content-Length'] = Buffer.byteLength(bodyStr);
+    }
+    const req = https.request(opts, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => { clearTimeout(timer); resolve({ status: res.statusCode, body: data }); });
+    });
+    req.on('error', e => { clearTimeout(timer); reject(e); });
+    if (bodyStr !== undefined) req.write(bodyStr);
+    req.end();
+  });
+}
+
+async function kvGet(key) {
+  const r = await kvReq('GET', key);
+  if (r.status === 404) return null;
+  if (r.status !== 200) throw new Error('KV GET ' + r.status);
+  try { return JSON.parse(r.body); } catch { return null; }
+}
+
+async function kvSet(key, val) {
+  const r = await kvReq('PUT', key, JSON.stringify(val));
+  if (r.status < 200 || r.status > 299) throw new Error('KV SET ' + r.status);
+}
+
+function kvDel(key) {
+  return new Promise((resolve) => {
+    const path = `/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces/${CF_NAMESPACE}/values/${encodeURIComponent(key)}`;
+    const req = https.request(
+      { hostname: 'api.cloudflare.com', port: 443, path, method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${CF_TOKEN}` } },
+      res => { res.resume(); res.on('end', resolve); }
+    );
+    req.on('error', resolve);
+    req.end();
+  });
+}
+
+function hashPwd(password, salt) {
+  if (!salt) salt = crypto.randomBytes(32).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return { hash, salt };
+}
+
+function verifyPwd(password, hash, salt) {
+  try {
+    const { hash: computed } = hashPwd(password, salt);
+    return crypto.timingSafeEqual(Buffer.from(computed, 'hex'), Buffer.from(hash, 'hex'));
+  } catch { return false; }
+}
+
+function token() { return crypto.randomBytes(32).toString('hex'); }
+
+function sendEmail(to, subject, html) {
+  if (!RESEND_KEY) return Promise.resolve();
+  return new Promise(resolve => {
+    const body = JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html });
+    const req = https.request(
+      { hostname: 'api.resend.com', port: 443, path: '/emails', method: 'POST',
+        headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body) } },
+      res => { res.resume(); res.on('end', resolve); }
+    );
+    req.on('error', resolve);
+    req.write(body);
+    req.end();
+  });
+}
+
+function emailBrand(content) {
+  return `<div style="font-family:'DM Sans',sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#F7F3EE;border-radius:16px">
+    <div style="text-align:center;margin-bottom:24px">
+      <span style="background:#C4622D;border-radius:10px;padding:8px 14px;font-size:18px">🏨</span>
+      <h2 style="font-family:Georgia,serif;color:#2C2118;margin:12px 0 4px">StaySplit</h2>
+    </div>
+    ${content}
+    <p style="font-size:11px;color:#8B7355;text-align:center;margin-top:24px">StaySplit · Reservas com comissionamento automático</p>
+  </div>`;
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: HEADERS, body: '' };
+  if (!CF_ACCOUNT || !CF_NAMESPACE || !CF_TOKEN) return fail(503, 'Armazenamento não configurado.');
+
+  const action = (event.queryStringParameters || {}).action;
+  let body = {};
+  try { body = JSON.parse(event.body || '{}'); } catch {}
+
+  if (action === 'register') {
+    const { email, password } = body;
+    if (!email || !password) return fail(400, 'E-mail e senha são obrigatórios.');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(400, 'E-mail inválido.');
+    if (password.length < 6) return fail(400, 'A senha deve ter pelo menos 6 caracteres.');
+    const key = 'user:' + email.toLowerCase().trim();
+    const existing = await kvGet(key).catch(() => null);
+    if (existing) return fail(409, 'Este e-mail já está cadastrado.');
+    const { hash, salt } = hashPwd(password);
+    await kvSet(key, { email: email.toLowerCase().trim(), hash, salt, criadoEm: new Date().toISOString() });
+    sendEmail(email, 'Bem-vindo ao StaySplit!', emailBrand(`
+      <h3 style="color:#2C2118">Sua conta foi criada!</h3>
+      <p style="color:#5C4A32">Olá! Sua conta StaySplit foi criada com sucesso para <strong>${email}</strong>.</p>
+      <p style="color:#5C4A32">Acesse o painel e configure sua chave de API Asaas em <strong>Configurações</strong> para começar.</p>
+      <div style="text-align:center;margin:20px 0">
+        <a href="${APP_URL}" style="background:#C4622D;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Acessar StaySplit</a>
+      </div>
+    `)).catch(() => {});
+    return ok({ ok: true });
+  }
+
+  if (action === 'login') {
+    const { email, password } = body;
+    if (!email || !password) return fail(400, 'E-mail e senha são obrigatórios.');
+    const user = await kvGet('user:' + email.toLowerCase().trim()).catch(() => null);
+    if (!user || !verifyPwd(password, user.hash, user.salt)) return fail(401, 'E-mail ou senha incorretos.');
+    const tok = token();
+    await kvSet('session:' + tok, { email: user.email, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    const emailId = user.email.replace(/[^a-zA-Z0-9]/g, '').slice(-20);
+    const config = await kvGet('config_' + emailId).catch(() => null);
+    return ok({ token: tok, email: user.email, config: config || null });
+  }
+
+  if (action === 'session') {
+    const { token: tok } = body;
+    if (!tok) return fail(401, 'Token ausente.');
+    const session = await kvGet('session:' + tok).catch(() => null);
+    if (!session || session.expiresAt < Date.now()) return fail(401, 'Sessão expirada.');
+    return ok({ email: session.email });
+  }
+
+  if (action === 'logout') {
+    const { token: tok } = body;
+    if (tok) kvDel('session:' + tok);
+    return ok({ ok: true });
+  }
+
+  if (action === 'forgot') {
+    const { email } = body;
+    if (!email) return fail(400, 'Informe o e-mail.');
+    const user = await kvGet('user:' + email.toLowerCase().trim()).catch(() => null);
+    if (!user) return ok({ ok: true });
+    const tok = token();
+    await kvSet('reset:' + tok, { email: user.email, expiresAt: Date.now() + 60 * 60 * 1000 });
+    const resetUrl = `${APP_URL}?reset=${tok}`;
+    sendEmail(email, 'Redefinir senha — StaySplit', emailBrand(`
+      <h3 style="color:#2C2118">Redefinir sua senha</h3>
+      <p style="color:#5C4A32">Recebemos uma solicitação para redefinir a senha da sua conta StaySplit.</p>
+      <p style="color:#5C4A32">Clique no botão abaixo para criar uma nova senha. O link expira em <strong>1 hora</strong>.</p>
+      <div style="text-align:center;margin:20px 0">
+        <a href="${resetUrl}" style="background:#C4622D;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Redefinir senha</a>
+      </div>
+      <p style="font-size:12px;color:#8B7355">Se você não solicitou isso, ignore este e-mail.</p>
+      <p style="font-size:12px;color:#8B7355;word-break:break-all">Link direto: ${resetUrl}</p>
+    `)).catch(() => {});
+    return ok({ ok: true });
+  }
+
+  if (action === 'reset') {
+    const { token: tok, password } = body;
+    if (!tok || !password) return fail(400, 'Dados incompletos.');
+    if (password.length < 6) return fail(400, 'A senha deve ter pelo menos 6 caracteres.');
+    const resetData = await kvGet('reset:' + tok).catch(() => null);
+    if (!resetData || resetData.expiresAt < Date.now()) return fail(400, 'Link inválido ou expirado. Solicite um novo.');
+    const user = await kvGet('user:' + resetData.email).catch(() => null);
+    if (!user) return fail(400, 'Usuário não encontrado.');
+    const { hash, salt } = hashPwd(password);
+    user.hash = hash; user.salt = salt;
+    await kvSet('user:' + resetData.email, user);
+    kvDel('reset:' + tok);
+    return ok({ ok: true });
+  }
+
+  if (action === 'change-password') {
+    const { token: tok, password } = body;
+    if (!tok || !password) return fail(400, 'Dados incompletos.');
+    if (password.length < 6) return fail(400, 'A senha deve ter pelo menos 6 caracteres.');
+    const session = await kvGet('session:' + tok).catch(() => null);
+    if (!session || session.expiresAt < Date.now()) return fail(401, 'Sessão inválida.');
+    const user = await kvGet('user:' + session.email).catch(() => null);
+    if (!user) return fail(400, 'Usuário não encontrado.');
+    const { hash, salt } = hashPwd(password);
+    user.hash = hash; user.salt = salt;
+    await kvSet('user:' + session.email, user);
+    return ok({ ok: true });
+  }
+
+  return fail(400, 'Ação desconhecida.');
+};
+2. netlify/functions/storage.js
+
+const https = require('https');
+
+const CF_ACCOUNT   = process.env.CF_ACCOUNT_ID;
+const CF_NAMESPACE = process.env.CF_KV_NAMESPACE_ID;
+const CF_TOKEN     = process.env.CF_KV_TOKEN;
+
+function kvRequest(method, key, bodyStr) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('KV timeout')), 5000);
+    const path = `/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces/${CF_NAMESPACE}/values/${encodeURIComponent(key)}`;
+    const opts = {
+      hostname: 'api.cloudflare.com', port: 443, path, method,
+      headers: { 'Authorization': `Bearer ${CF_TOKEN}` }
+    };
+    if (bodyStr !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.headers['Content-Length'] = Buffer.byteLength(bodyStr);
+    }
+    const req = https.request(opts, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => { clearTimeout(timer); resolve({ status: res.statusCode, body: data }); });
+    });
+    req.on('error', e => { clearTimeout(timer); reject(e); });
+    if (bodyStr !== undefined) req.write(bodyStr);
+    req.end();
+  });
+}
+
+exports.handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  };
+
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
+
+  if (!CF_ACCOUNT || !CF_NAMESPACE || !CF_TOKEN) {
+    return { statusCode: 503, headers, body: JSON.stringify({ error: 'storage_not_configured' }) };
+  }
+
+  const { _session: sessionToken, tipo } = event.queryStringParameters || {};
+
+  if (!sessionToken || !['hist', 'hoteis', 'config'].includes(tipo)) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid params' }) };
+  }
+
+  let email;
+  try {
+    const sessionRes = await kvRequest('GET', 'session:' + sessionToken);
+    if (sessionRes.status !== 200) return { statusCode: 401, headers, body: JSON.stringify({ error: 'session_expired' }) };
+    const session = JSON.parse(sessionRes.body);
+    if (!session || session.expiresAt < Date.now()) {
+      return { statusCode: 401, headers, body: JSON.stringify({ error: 'session_expired' }) };
+    }
+    email = session.email;
+  } catch(e) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'session_expired' }) };
+  }
+
+  const emailId = email.replace(/[^a-zA-Z0-9]/g, '').slice(-20);
+  const kvKey = `${tipo}_${emailId}`;
+
+  if (event.httpMethod === 'GET') {
+    try {
+      const res = await kvRequest('GET', kvKey);
+      if (res.status === 404) return { statusCode: 200, headers, body: JSON.stringify(null) };
+      if (res.status !== 200) {
+        console.error('[storage] KV GET error:', res.status);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'get_failed' }) };
+      }
+      return { statusCode: 200, headers, body: res.body };
+    } catch(e) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'get_failed', detail: e.message }) };
+    }
+  }
+
+  if (event.httpMethod === 'POST') {
+    try {
+      const bodyStr = event.body || 'null';
+      const res = await kvRequest('PUT', kvKey, bodyStr);
+      if (res.status < 200 || res.status > 299) {
+        console.error('[storage] KV PUT error:', res.status);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'set_failed' }) };
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    } catch(e) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'set_failed', detail: e.message }) };
+    }
+  }
+
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+};
+3. index.html
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StaySplit — Reservas com Comissionamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #F7F3EE; --warm: #EDE6DC; --sand: #D4C9B5;
+  --bark: #8B7355; --earth: #5C4A32; --deep: #2C2118;
+  --accent: #C4622D; --accent-light: #F0D4C4;
+  --success: #2D6A4F; --success-light: #D8F3DC;
+  --gold: #B5860D; --gold-light: #FFF3CD;
+  --white: #FFFFFF;
+  --shadow: 0 2px 20px rgba(44,33,24,0.08);
+  --shadow-lg: 0 8px 40px rgba(44,33,24,0.14);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--deep); min-height: 100vh; }
+
+#login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--deep); position: relative; overflow: hidden; }
+#login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 20% 50%, rgba(196,98,45,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 30%, rgba(181,134,13,0.12) 0%, transparent 60%); }
+.login-card { background: var(--white); border-radius: 20px; padding: 48px 44px; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow-lg); }
+.brand { text-align: center; margin-bottom: 32px; }
+.brand-icon { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 22px; }
+.brand h1 { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--deep); }
+.brand p { font-size: 13px; color: var(--bark); margin-top: 4px; }
+.auth-link { text-align: center; margin-top: 10px; font-size: 13px; color: var(--bark); }
+.auth-link a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.auth-link a:hover { text-decoration: underline; }
+.auth-link-sm { text-align: center; margin-top: 6px; font-size: 13px; }
+.auth-link-sm a { color: var(--bark); text-decoration: none; }
+.auth-link-sm a:hover { color: var(--accent); }
+.auth-success { background: var(--success-light); border: 1.5px solid #95D5B2; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--success); margin-bottom: 16px; display: none; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--warm); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--deep); background: var(--cream); transition: border-color .2s; outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: var(--accent); background: var(--white); }
+.btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.btn-primary { background: var(--accent); color: var(--white); }
+.btn-primary:hover { background: #a8521f; }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+.btn-success { background: var(--success); color: var(--white); }
+.btn-success:hover { background: #1d4d38; }
+.btn-success:disabled { opacity: .6; cursor: not-allowed; }
+
+#app { display: none; min-height: 100vh; }
+.topbar { background: var(--deep); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.topbar-brand { font-family: 'DM Serif Display', serif; color: var(--white); font-size: 20px; display: flex; align-items: center; gap: 10px; }
+.topbar-brand span { background: var(--accent); border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.env-badge { background: var(--gold); color: var(--white); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
+.env-badge.prod { background: var(--success); }
+.user-email { font-size: 12px; color: rgba(255,255,255,0.55); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; }
+.logout-btn:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
+.main-content { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--warm); border-radius: 12px; padding: 4px; width: fit-content; }
+.tab-btn { padding: 9px 20px; border: none; border-radius: 9px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
+.tab-btn.active { background: var(--white); color: var(--deep); box-shadow: 0 1px 6px rgba(44,33,24,0.1); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.card { background: var(--white); border-radius: 16px; padding: 28px 32px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--deep); margin-bottom: 6px; }
+.card-sub { font-size: 13px; color: var(--bark); margin-bottom: 24px; line-height: 1.5; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.section-sep { height: 1px; background: var(--warm); margin: 20px 0; }
+.payment-types { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.pay-type-btn { flex: 1; min-width: 100px; padding: 14px 10px; border: 2px solid var(--warm); border-radius: 12px; background: var(--cream); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; }
+.pay-type-btn.selected { border-color: var(--accent); background: var(--accent-light); }
+.pay-type-icon { font-size: 22px; display: block; margin-bottom: 6px; }
+.pay-type-label { font-size: 13px; font-weight: 500; color: var(--deep); }
+.split-preview { background: var(--cream); border-radius: 12px; padding: 20px; margin-top: 16px; }
+.split-preview-title { font-size: 12px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+.split-bar-wrap { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.split-bar-voce { background: var(--earth); transition: width .4s; }
+.split-bar-parceiro { background: var(--accent); transition: width .4s; }
+.split-legend { display: flex; justify-content: space-between; font-size: 13px; }
+.split-legend-item { display: flex; align-items: center; gap: 6px; }
+.split-dot { width: 8px; height: 8px; border-radius: 50%; }
+.result-box { background: var(--success-light); border: 1.5px solid #95D5B2; border-radius: 14px; padding: 24px 28px; margin-top: 20px; display: none; }
+.result-box.show { display: block; }
+.result-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--success); margin-bottom: 16px; }
+.result-link { background: var(--white); border: 1.5px solid #95D5B2; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.result-link-url { font-family: monospace; font-size: 13px; color: var(--success); word-break: break-all; flex: 1; }
+.copy-btn { background: var(--success); color: var(--white); border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; flex-shrink: 0; }
+.result-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.result-detail-item { background: var(--white); border-radius: 10px; padding: 12px 14px; }
+.result-detail-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.result-detail-value { font-size: 15px; font-weight: 600; color: var(--deep); }
+.whatsapp-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: var(--white); border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; margin-top: 12px; width: 100%; }
+.nova-cob-btn { display: block; width: 100%; padding: 13px; border: 2px solid var(--bark); border-radius: 10px; background: none; color: var(--bark); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: all .2s; }
+.nova-cob-btn:hover { background: var(--bark); color: var(--white); }
+.hotel-item { background: var(--cream); border: 1.5px solid var(--warm); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hotel-item-name { font-size: 14px; font-weight: 600; color: var(--deep); }
+.hotel-item-meta { font-size: 12px; color: var(--bark); margin-top: 2px; }
+.hotel-usar-btn { background: var(--accent); color: var(--white); border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.hotel-del-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.historico-empty { text-align: center; padding: 60px 20px; color: var(--bark); }
+.cobranca-item { background: var(--white); border: 1.5px solid var(--warm); border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cob-hotel { font-size: 14px; font-weight: 600; color: var(--deep); }
+.cob-meta { font-size: 12px; color: var(--bark); margin-top: 3px; }
+.cob-valor { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--earth); }
+.cob-status { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
+.status-pending  { background: var(--gold-light); color: var(--gold); }
+.status-paid     { background: var(--success-light); color: var(--success); }
+.status-overdue  { background: #FEE2E2; color: #991B1B; }
+.status-refunded { background: #F3F4F6; color: #6B7280; }
+.cob-link-btn { background: none; border: 1.5px solid var(--sand); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--bark); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.cob-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+.stat-card { background: var(--cream); border-radius: 12px; padding: 18px 20px; }
+.stat-label { font-size: 11px; font-weight: 600; color: var(--bark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--deep); }
+.config-saved { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 10px 16px; font-size: 13px; color: var(--gold); font-weight: 500; display: none; margin-top: 12px; }
+.config-saved.show { display: block; }
+.loading { display: none; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: var(--bark); font-size: 14px; }
+.loading.show { display: flex; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--warm); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.alert { border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; line-height: 1.5; }
+.alert.show { display: block; }
+.alert-error { background: #FEE2E2; border: 1.5px solid #FCA5A5; color: #991B1B; }
+.alert-info { background: var(--accent-light); border: 1.5px solid #F0A882; color: #7C2D12; }
+.sinal-box { background: var(--gold-light); border: 1.5px solid #FFD700; border-radius: 10px; padding: 14px 16px; margin-top: 12px; }
+.sinal-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--earth); font-weight: 500; }
+.sinal-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.action-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.btn-sm { padding: 8px 16px; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.btn-outline { background: none; border: 1.5px solid var(--sand); color: var(--bark); }
+.btn-outline:hover { border-color: var(--bark); color: var(--deep); }
+.btn-outline:disabled { opacity: .5; cursor: not-allowed; }
+.btn-export { background: var(--success); color: var(--white); }
+.btn-export:hover { background: #1d4d38; }
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast { background: var(--deep); color: var(--white); border-radius: 12px; padding: 14px 18px; font-size: 13px; max-width: 300px; box-shadow: var(--shadow-lg); display: flex; align-items: flex-start; gap: 12px; animation: toastIn .3s ease; pointer-events: all; line-height: 1.5; }
+.toast-success { border-left: 4px solid var(--success); }
+.toast-close { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; padding: 0 0 0 8px; margin-left: auto; flex-shrink: 0; }
+.toast-close:hover { color: var(--white); }
+@keyframes toastIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.apikey-banner { background: #FEF3C7; color: #92400E; font-size: 13px; font-weight: 500; padding: 10px 20px; text-align: center; position: sticky; top: 60px; z-index: 99; border-bottom: 1px solid #FDE68A; }
+.apikey-banner a { color: #92400E; text-decoration: underline; cursor: pointer; font-weight: 600; }
+@media (max-width: 600px) {
+  .main-content { padding: 20px 16px; }
+  .card { padding: 20px 18px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .login-card { padding: 36px 24px; margin: 16px; }
+  .topbar { padding: 0 16px; }
+  .user-email { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-icon">🏨</div>
+      <h1>StaySplit</h1>
+      <p>Reservas com comissionamento automático</p>
+    </div>
+    <div id="ls-login">
+      <div class="alert alert-error" id="login-error"></div>
+      <div class="form-group"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email"></div>
+      <div class="form-group"><label>Senha</label><input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter') fazerLogin()"></div>
+      <button class="btn btn-primary" id="btn-login" onclick="fazerLogin()">Entrar</button>
+      <div class="auth-link-sm" style="margin-top:14px"><a href="#" onclick="mostrarTela('esqueceu');return false">Esqueceu a senha?</a></div>
+      <div class="auth-link" style="margin-top:8px">Não tem conta? <a href="#" onclick="mostrarTela('cadastro');return false">Cadastre-se grátis</a></div>
+    </div>
+    <div id="ls-cadastro" style="display:none">
+      <div class="alert alert-error" id="cadastro-error"></div>
+      <div class="auth-success" id="cadastro-ok"></div>
+      <div class="form-group"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email"></div>
+      <div class="form-group"><label>Senha <span style="font-weight:400;text-transform:none;letter-spacing:0">(mínimo 6 caracteres)</span></label><input type="password" id="cad-senha" placeholder="Crie uma senha"></div>
+      <div class="form-group"><label>Confirmar senha</label><input type="password" id="cad-senha2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter') fazerCadastro()"></div>
+      <button class="btn btn-primary" id="btn-cadastro" onclick="fazerCadastro()">Criar conta</button>
+      <div class="auth-link" style="margin-top:14px">Já tem conta? <a href="#" onclick="mostrarTela('login');return false">Entrar</a></div>
+    </div>
+    <div id="ls-esqueceu" style="display:none">
+      <div class="alert alert-error" id="esqueceu-error"></div>
+      <div class="auth-success" id="esqueceu-ok"></div>
+      <p style="font-size:13px;color:var(--bark);margin-bottom:18px;line-height:1.6">Informe seu e-mail e enviaremos um link para criar uma nova senha.</p>
+      <div class="form-group"><label>E-mail</label><input type="email" id="esq-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter') enviarReset()"></div>
+      <button class="btn btn-primary" id="btn-esqueceu" onclick="enviarReset()">Enviar link de recuperação</button>
+      <div class="auth-link-sm" style="margin-top:14px"><a href="#" onclick="mostrarTela('login');return false">← Voltar ao login</a></div>
+    </div>
+    <div id="ls-reset" style="display:none">
+      <div class="alert alert-error" id="reset-error"></div>
+      <div class="auth-success" id="reset-ok"></div>
+      <p style="font-size:13px;color:var(--bark);margin-bottom:18px;line-height:1.6">Crie uma nova senha para sua conta.</p>
+      <div class="form-group"><label>Nova senha <span style="font-weight:400;text-transform:none;letter-spacing:0">(mínimo 6 caracteres)</span></label><input type="password" id="reset-senha" placeholder="Nova senha"></div>
+      <div class="form-group"><label>Confirmar nova senha</label><input type="password" id="reset-senha2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter') redefinirSenha()"></div>
+      <button class="btn btn-primary" id="btn-reset" onclick="redefinirSenha()">Salvar nova senha</button>
+    </div>
+    <div id="ls-loading" style="display:none;text-align:center;padding:20px 0">
+      <div class="spinner" style="margin:0 auto 10px"></div>
+      <p style="font-size:13px;color:var(--bark)">Verificando sessão...</p>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand"><span>🏨</span> StaySplit</div>
+    <div class="topbar-right">
+      <span class="env-badge" id="env-badge">Sandbox</span>
+      <span class="user-email" id="user-email-display"></span>
+      <button class="logout-btn" onclick="fazerLogout()">Sair</button>
+    </div>
+  </div>
+  <div id="apikey-banner" class="apikey-banner" style="display:none">
+    ⚠️ Configure sua chave de API Asaas em <a onclick="mudarTab('config')">Configurações</a> para começar a usar o StaySplit.
+  </div>
+  <div class="main-content">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="mudarTab('nova')">Nova cobrança</button>
+      <button class="tab-btn" onclick="mudarTab('hoteis')">Hotéis</button>
+      <button class="tab-btn" onclick="mudarTab('historico')">Histórico</button>
+      <button class="tab-btn" onclick="mudarTab('financeiro')">Financeiro</button>
+      <button class="tab-btn" onclick="mudarTab('config')">Configurações</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-nova">
+      <div class="card">
+        <div class="card-title">Gerar cobrança de reserva</div>
+        <div class="card-sub">Preencha os dados abaixo. O link será enviado ao hóspede para pagamento.</div>
+        <div class="alert alert-error" id="nova-error"></div>
+        <div class="alert alert-info" id="nova-info"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Hóspede</p>
+        <div class="grid-2">
+          <div class="form-group"><label>Nome completo</label><input type="text" id="h-nome" placeholder="Ex: Maria Silva"></div>
+          <div class="form-group"><label>CPF / CNPJ</label><input type="text" id="h-cpf" placeholder="00000000000"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label>E-mail (opcional)</label><input type="email" id="h-email" placeholder="hospede@email.com"></div>
+          <div class="form-group"><label>Celular (opcional)</label><input type="text" id="h-fone" placeholder="11 99999-9999"></div>
+        </div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Reserva</p>
+        <div class="grid-2">
+          <div class="form-group"><label>Hotel / Pousada</label><input type="text" id="r-hotel" placeholder="Ex: Pousada Vista Mar"></div>
+          <div class="form-group"><label>Tipo de quarto</label><input type="text" id="r-quarto" placeholder="Ex: Suíte Casal"></div>
+        </div>
+        <div class="grid-3">
+          <div class="form-group"><label>Check-in</label><input type="date" id="r-checkin"></div>
+          <div class="form-group"><label>Check-out</label><input type="date" id="r-checkout"></div>
+          <div class="form-group"><label>Valor total da hospedagem (R$)</label><input type="number" id="r-valor" placeholder="1000.00" min="10" step="0.01" oninput="atualizarPreview()"></div>
+        </div>
+        <div class="sinal-box">
+          <label class="sinal-toggle">
+            <input type="checkbox" id="r-sinal-check" onchange="toggleSinal()">
+            Pagamento parcial — hóspede paga apenas um sinal agora
+          </label>
+          <div id="sinal-wrap" style="display:none;margin-top:12px">
+            <div class="form-group" style="margin-bottom:0"><label>Valor do sinal (R$) — restante pago no check-in</label><input type="number" id="r-valor-sinal" placeholder="Ex: 500.00" min="1" step="0.01" oninput="atualizarPreview()"></div>
+          </div>
+        </div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Forma de pagamento</p>
+        <div class="payment-types">
+          <button class="pay-type-btn selected" id="pt-PIX" onclick="selecionarPagamento('PIX')"><span class="pay-type-icon">⚡</span><span class="pay-type-label">Pix</span></button>
+          <button class="pay-type-btn" id="pt-BOLETO" onclick="selecionarPagamento('BOLETO')"><span class="pay-type-icon">📄</span><span class="pay-type-label">Boleto</span></button>
+          <button class="pay-type-btn" id="pt-CREDIT_CARD" onclick="selecionarPagamento('CREDIT_CARD')"><span class="pay-type-icon">💳</span><span class="pay-type-label">Cartão</span></button>
+          <button class="pay-type-btn" id="pt-UNDEFINED" onclick="selecionarPagamento('UNDEFINED')"><span class="pay-type-icon">🔀</span><span class="pay-type-label">Cliente escolhe</span></button>
+        </div>
+        <div id="parcelas-wrap" style="display:none;margin-top:14px">
+          <div class="form-group"><label>Número de parcelas</label><select id="r-parcelas"><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="10" selected>10x</option><option value="12">12x</option></select></div>
+        </div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Comissionamento</p>
+        <div class="grid-2">
+          <div class="form-group"><label>WalletId do parceiro</label><input type="text" id="r-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" oninput="atualizarPreview()"></div>
+          <div class="form-group"><label>Comissão % sobre netValue</label><input type="number" id="r-comissao" value="10" min="1" max="90" step="0.5" oninput="atualizarPreview()"></div>
+        </div>
+        <div class="split-preview" id="split-preview" style="display:none">
+          <div class="split-preview-title">Distribuição estimada<span id="split-base-label" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--earth);margin-left:6px;font-size:11px"></span></div>
+          <div class="split-bar-wrap"><div class="split-bar-voce" id="bar-voce" style="width:90%"></div><div class="split-bar-parceiro" id="bar-parceiro" style="width:10%"></div></div>
+          <div class="split-legend">
+            <div class="split-legend-item"><div class="split-dot" style="background:var(--earth)"></div><span style="font-size:13px;color:var(--earth)">Sua conta: <strong id="legend-voce">R$ 0,00</strong></span></div>
+            <div class="split-legend-item"><div class="split-dot" style="background:var(--accent)"></div><span style="font-size:13px;color:var(--accent)">Parceiro: <strong id="legend-parc">R$ 0,00</strong></span></div>
+          </div>
+          <p style="font-size:11px;color:var(--bark);margin-top:10px">* Estimativa antes da dedução das taxas Asaas</p>
+        </div>
+        <div class="loading" id="loading-nova"><div class="spinner"></div> Criando cobrança...</div>
+        <button class="btn btn-success" id="btn-gerar" onclick="gerarCobranca()" style="margin-top:20px">Gerar link de pagamento</button>
+      </div>
+      <div class="result-box" id="result-box">
+        <div class="result-title">✅ Link gerado com sucesso!</div>
+        <div class="result-link"><span class="result-link-url" id="result-url"></span><button class="copy-btn" onclick="copiarLink()">Copiar</button></div>
+        <div class="result-details">
+          <div class="result-detail-item"><div class="result-detail-label">Valor cobrado</div><div class="result-detail-value" id="result-valor"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">Pagamento</div><div class="result-detail-value" id="result-tipo"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">Comissão</div><div class="result-detail-value" id="result-comissao"></div></div>
+          <div class="result-detail-item"><div class="result-detail-label">ID</div><div class="result-detail-value" id="result-id" style="font-size:12px;font-family:monospace"></div></div>
+        </div>
+        <div id="result-sinal-info" style="display:none;margin-top:12px;background:var(--gold-light);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--earth);font-weight:500"></div>
+        <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">📱 Enviar por WhatsApp</a>
+        <button class="nova-cob-btn" onclick="novaCobranca()">+ Nova cobrança</button>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-hoteis">
+      <div class="card">
+        <div class="card-title">Hotéis e pousadas</div>
+        <div class="card-sub">Cadastre seus parceiros. Clique em "Usar" para preencher a cobrança automaticamente.</div>
+        <div class="grid-2">
+          <div class="form-group"><label>Nome do hotel / pousada</label><input type="text" id="novo-hotel-nome" placeholder="Ex: Pousada Vista Mar"></div>
+          <div class="form-group"><label>WalletId Asaas</label><input type="text" id="novo-hotel-wallet" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label>Comissão padrão (%)</label><input type="number" id="novo-hotel-comissao" value="10" min="1" max="90" step="0.5"></div>
+          <div class="form-group"><label>Observação (opcional)</label><input type="text" id="novo-hotel-obs" placeholder="Ex: Temporada alta 15%"></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto;padding:12px 28px" onclick="salvarHotel()">Salvar parceiro</button>
+        <div id="hoteis-lista" style="margin-top:20px"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-historico">
+      <div class="card">
+        <div class="action-bar">
+          <div><div class="card-title" style="margin-bottom:2px">Histórico de cobranças</div><div style="font-size:13px;color:var(--bark)">Cobranças geradas por esta conta.</div></div>
+          <button class="btn-sm btn-outline" id="btn-atualizar-status" onclick="atualizarStatusCobrancas()">↻ Atualizar status</button>
+        </div>
+        <div id="historico-lista"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-financeiro">
+      <div class="card">
+        <div class="action-bar">
+          <div><div class="card-title" style="margin-bottom:2px">Painel financeiro</div><div style="font-size:13px;color:var(--bark)">Resumo das cobranças desta conta.</div></div>
+          <button class="btn-sm btn-export" onclick="exportarCSV()">⬇ Exportar Excel</button>
+        </div>
+        <p style="font-size:11px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Visão geral</p>
+        <div class="grid-2" style="margin-bottom:24px">
+          <div class="stat-card"><div class="stat-label">Total cobranças</div><div class="stat-value" id="fin-total">0</div></div>
+          <div class="stat-card"><div class="stat-label">Volume total gerado</div><div class="stat-value" id="fin-volume">R$ 0</div></div>
+        </div>
+        <p style="font-size:11px;font-weight:600;color:var(--success);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Valores recebidos</p>
+        <div style="background:var(--success-light);border:1.5px solid #95D5B2;border-radius:14px;padding:20px 24px;margin-bottom:24px">
+          <div class="grid-2" style="margin-bottom:16px">
+            <div><div style="font-size:11px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Pago pelos hóspedes</div><div style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--deep)" id="fin-pago">R$ 0</div></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Comissões repassadas</div><div style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--bark)" id="fin-comissao">R$ 0</div></div>
+          </div>
+          <div style="border-top:1.5px solid #95D5B2;padding-top:16px">
+            <div style="font-size:11px;font-weight:600;color:var(--success);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Sua receita líquida</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:32px;color:var(--success)" id="fin-receita-paga">R$ 0</div>
+            <div style="font-size:12px;color:var(--success);margin-top:8px;line-height:1.6;opacity:.85">Pix e Boleto = dinheiro já creditado na sua conta · Cartão = aprovado pela operadora, disponível conforme prazo de liquidação</div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-bottom:8px">
+          <div class="stat-card" id="fin-pendente-card"><div class="stat-label" id="fin-pendente-label">⏳ Aguardando pagamento</div><div class="stat-value" id="fin-pendente-valor">R$ 0</div><div style="font-size:12px;color:var(--bark);margin-top:6px" id="fin-pendente-count">0 cobranças em aberto</div></div>
+          <div class="stat-card" id="fin-vencido-card"><div class="stat-label" id="fin-vencido-label">Cobranças vencidas</div><div class="stat-value" id="fin-vencido-valor">R$ 0</div><div style="font-size:12px;color:var(--bark);margin-top:6px" id="fin-vencido-count">0 cobranças</div></div>
+        </div>
+        <div id="fin-vencidas-lista" style="margin-top:4px"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-config">
+      <div class="card">
+        <div class="card-title">Configurações</div>
+        <div class="card-sub">Credenciais e preferências desta conta.</div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Conta</p>
+        <div class="form-group"><label>E-mail</label><input type="email" id="cfg-email-display" disabled style="opacity:.6;cursor:default"></div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">API Asaas</p>
+        <div class="form-group"><label>Chave de API Asaas</label><input type="password" id="cfg-apikey" placeholder="$aact_..."></div>
+        <div class="form-group"><label>Ambiente</label><select id="cfg-env"><option value="sandbox">Sandbox (testes)</option><option value="production">Produção</option></select></div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Padrões de cobrança</p>
+        <div class="form-group"><label>WalletId padrão do parceiro</label><input type="text" id="cfg-wallet"></div>
+        <div class="form-group"><label>Comissão padrão (%)</label><input type="number" id="cfg-comissao" value="10"></div>
+        <div class="section-sep"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--bark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Alterar senha</p>
+        <div class="grid-2">
+          <div class="form-group"><label>Nova senha</label><input type="password" id="cfg-senha" placeholder="Mínimo 6 caracteres"></div>
+          <div class="form-group"><label>Confirmar nova senha</label><input type="password" id="cfg-senha2" placeholder="Repita a nova senha"></div>
+        </div>
+        <button class="btn btn-primary" onclick="salvarConfig()" style="width:auto;padding:12px 28px">Salvar configurações</button>
+        <div class="config-saved" id="config-saved">✓ Configurações salvas!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script>
+const AUTH_URL    = '/.netlify/functions/auth';
+const STORAGE_URL = '/.netlify/functions/storage';
+const ASAAS_URL   = '/.netlify/functions/asaas';
+
+let sessao = null;
+let cobrancaEmAndamento = false;
+let statusCache = {};
+let autoRefreshTimer = null;
+let resetToken = null;
+
+function salvarSessaoLocal(s) {
+  if (s) localStorage.setItem('ss_session_v2', JSON.stringify(s));
+  else localStorage.removeItem('ss_session_v2');
+}
+function carregarSessaoLocal() {
+  try { return JSON.parse(localStorage.getItem('ss_session_v2') || 'null'); } catch { return null; }
+}
+function storageKey(tipo) {
+  const id = (sessao?.email || 'default').replace(/[^a-zA-Z0-9]/g, '').slice(-16);
+  return 'ss_' + tipo + '_' + id;
+}
+function localGet(tipo) {
+  try { return JSON.parse(localStorage.getItem(storageKey(tipo)) || 'null'); } catch { return null; }
+}
+function localSet(tipo, dados) {
+  try { localStorage.setItem(storageKey(tipo), JSON.stringify(dados)); } catch {}
+}
+
+async function authAPI(action, body) {
+  const res = await fetch(`${AUTH_URL}?action=${action}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Erro ao processar.');
+  return data;
+}
+
+async function storageGet(tipo) {
+  if (!sessao?.token) return null;
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`${STORAGE_URL}?_session=${encodeURIComponent(sessao.token)}&tipo=${tipo}`, { signal: controller.signal });
+    clearTimeout(tid);
+    if (res.status === 401) { fazerLogout(); return null; }
+    if (res.ok) { const data = await res.json(); if (data !== null) localSet(tipo, data); return data; }
+  } catch(e) { console.error('[storage] GET:', e.message); }
+  return localGet(tipo);
+}
+
+async function storageSet(tipo, dados) {
+  if (!sessao?.token) return;
+  localSet(tipo, dados);
+  try {
+    const res = await fetch(`${STORAGE_URL}?_session=${encodeURIComponent(sessao.token)}&tipo=${tipo}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+    });
+    if (res.status === 401) fazerLogout();
+  } catch(e) { console.error('[storage] SET:', e.message); }
+}
+
+async function asaasAPI(method, path, body) {
+  if (!sessao?.asaasApiKey) throw new Error('Chave de API Asaas não configurada. Acesse Configurações.');
+  const url = `${ASAAS_URL}?_path=${encodeURIComponent(path)}&_token=${encodeURIComponent(sessao.asaasApiKey)}&_env=${sessao.env || 'sandbox'}`;
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) { throw new Error('Resposta inválida: ' + text.slice(0, 100)); }
+  if (!res.ok) throw new Error(extrairErro(data));
+  return data;
+}
+
+function mostrarTela(tela) {
+  ['login','cadastro','esqueceu','reset','loading'].forEach(t => {
+    const el = document.getElementById('ls-' + t);
+    if (el) el.style.display = t === tela ? 'block' : 'none';
+  });
+  ['login-error','cadastro-error','esqueceu-error','reset-error'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('show'); });
+  ['cadastro-ok','esqueceu-ok','reset-ok'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
+
+window.onload = async () => {
+  const hoje = new Date().toISOString().split('T')[0];
+  const cin = document.getElementById('r-checkin'); const cout = document.getElementById('r-checkout');
+  if (cin) cin.min = hoje; if (cout) cout.min = hoje;
+  const params = new URLSearchParams(window.location.search);
+  const rt = params.get('reset');
+  if (rt) { resetToken = rt; mostrarTela('reset'); return; }
+  const saved = carregarSessaoLocal();
+  if (saved?.token) {
+    mostrarTela('loading');
+    try {
+      const res = await authAPI('session', { token: saved.token });
+      if (res.email) { sessao = saved; await abrirApp(); return; }
+    } catch {}
+    salvarSessaoLocal(null);
+  }
+  mostrarTela('login');
+};
+
+async function fazerLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.remove('show');
+  if (!email || !senha) { mostrarAlerta(errEl, 'Informe e-mail e senha.'); return; }
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try {
+    const result = await authAPI('login', { email, password: senha });
+    const cfg = result.config || {};
+    sessao = { email: result.email, token: result.token, asaasApiKey: cfg.asaasApiKey || '', env: cfg.env || 'sandbox', walletPadrao: cfg.walletPadrao || '', comissaoPadrao: cfg.comissaoPadrao || 10 };
+    salvarSessaoLocal(sessao);
+    await abrirApp();
+  } catch(e) { mostrarAlerta(errEl, e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Entrar'; }
+}
+
+async function fazerCadastro() {
+  const email = document.getElementById('cad-email').value.trim();
+  const senha = document.getElementById('cad-senha').value;
+  const senha2 = document.getElementById('cad-senha2').value;
+  const errEl = document.getElementById('cadastro-error'); const okEl = document.getElementById('cadastro-ok');
+  errEl.classList.remove('show'); okEl.style.display = 'none';
+  if (!email || !senha) { mostrarAlerta(errEl, 'Preencha todos os campos.'); return; }
+  if (senha !== senha2) { mostrarAlerta(errEl, 'As senhas não conferem.'); return; }
+  if (senha.length < 6) { mostrarAlerta(errEl, 'A senha deve ter pelo menos 6 caracteres.'); return; }
+  const btn = document.getElementById('btn-cadastro');
+  btn.disabled = true; btn.textContent = 'Cadastrando...';
+  try {
+    await authAPI('register', { email, password: senha });
+    okEl.style.display = 'block';
+    okEl.textContent = '✅ Conta criada! Verifique seu e-mail e faça login.';
+    document.getElementById('cad-email').value = ''; document.getElementById('cad-senha').value = ''; document.getElementById('cad-senha2').value = '';
+    setTimeout(() => { okEl.style.display = 'none'; mostrarTela('login'); document.getElementById('login-email').value = email; }, 3000);
+  } catch(e) { mostrarAlerta(errEl, e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Criar conta'; }
+}
+
+async function enviarReset() {
+  const email = document.getElementById('esq-email').value.trim();
+  const errEl = document.getElementById('esqueceu-error'); const okEl = document.getElementById('esqueceu-ok');
+  errEl.classList.remove('show'); okEl.style.display = 'none';
+  if (!email) { mostrarAlerta(errEl, 'Informe seu e-mail.'); return; }
+  const btn = document.getElementById('btn-esqueceu');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    await authAPI('forgot', { email });
+    okEl.style.display = 'block';
+    okEl.textContent = '✅ Se o e-mail estiver cadastrado, você receberá o link em breve. Verifique também a caixa de spam.';
+  } catch(e) { mostrarAlerta(errEl, e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Enviar link de recuperação'; }
+}
+
+async function redefinirSenha() {
+  const senha = document.getElementById('reset-senha').value;
+  const senha2 = document.getElementById('reset-senha2').value;
+  const errEl = document.getElementById('reset-error'); const okEl = document.getElementById('reset-ok');
+  errEl.classList.remove('show'); okEl.style.display = 'none';
+  if (!senha || !senha2) { mostrarAlerta(errEl, 'Preencha os campos.'); return; }
+  if (senha !== senha2) { mostrarAlerta(errEl, 'As senhas não conferem.'); return; }
+  if (senha.length < 6) { mostrarAlerta(errEl, 'A senha deve ter pelo menos 6 caracteres.'); return; }
+  const btn = document.getElementById('btn-reset');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    await authAPI('reset', { token: resetToken, password: senha });
+    okEl.style.display = 'block';
+    okEl.textContent = '✅ Senha alterada com sucesso! Você será redirecionado para o login.';
+    setTimeout(() => { window.history.replaceState({}, '', '/'); resetToken = null; mostrarTela('login'); btn.disabled = false; btn.textContent = 'Salvar nova senha'; }, 2500);
+  } catch(e) { mostrarAlerta(errEl, e.message); btn.disabled = false; btn.textContent = 'Salvar nova senha'; }
+}
+
+async function abrirApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('env-badge').textContent = sessao.env === 'production' ? 'Produção' : 'Sandbox';
+  document.getElementById('env-badge').className = 'env-badge' + (sessao.env === 'production' ? ' prod' : '');
+  document.getElementById('user-email-display').textContent = sessao.email;
+  if (!sessao.asaasApiKey) document.getElementById('apikey-banner').style.display = 'block';
+  const [hist, hoteis] = await Promise.all([storageGet('hist'), storageGet('hoteis')]);
+  const histFinal = hist || [];
+  histFinal.forEach(h => { statusCache[h.id] = h.status || 'PENDING'; });
+  renderHistorico(histFinal); renderHoteis(hoteis || []); renderFinanceiro(histFinal); preencherConfig();
+  if (sessao.walletPadrao) document.getElementById('r-wallet').value = sessao.walletPadrao;
+  if (sessao.comissaoPadrao) document.getElementById('r-comissao').value = sessao.comissaoPadrao;
+  iniciarAutoRefresh(); verificarNovosPagamentos();
+}
+
+function preencherConfig() {
+  document.getElementById('cfg-email-display').value = sessao.email || '';
+  document.getElementById('cfg-apikey').value = sessao.asaasApiKey || '';
+  document.getElementById('cfg-env').value = sessao.env || 'sandbox';
+  document.getElementById('cfg-wallet').value = sessao.walletPadrao || '';
+  document.getElementById('cfg-comissao').value = sessao.comissaoPadrao || 10;
+}
+
+async function fazerLogout() {
+  pararAutoRefresh(); statusCache = {};
+  if (sessao?.token) authAPI('logout', { token: sessao.token }).catch(() => {});
+  sessao = null; salvarSessaoLocal(null);
+  ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor','r-wallet'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('result-box').classList.remove('show');
+  document.getElementById('nova-error').classList.remove('show');
+  document.getElementById('nova-info').classList.remove('show');
+  document.getElementById('apikey-banner').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  mostrarTela('login');
+}
+
+async function mudarTab(id) {
+  const ids = ['nova','hoteis','historico','financeiro','config'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ids[i]===id));
+  ids.forEach(i => { const p = document.getElementById('tab-'+i); if (p) p.classList.toggle('active', i===id); });
+  if (!sessao) return;
+  if (id === 'historico') { const hist = await storageGet('hist') || []; renderHistorico(hist); atualizarStatusCobrancas(); }
+  if (id === 'financeiro') { const hist = await storageGet('hist') || []; renderFinanceiro(hist); }
+  if (id === 'hoteis') { const hoteis = await storageGet('hoteis') || []; renderHoteis(hoteis); }
+}
+
+let pagamentoSelecionado = 'PIX';
+
+function selecionarPagamento(tipo) {
+  pagamentoSelecionado = tipo;
+  document.querySelectorAll('.pay-type-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('pt-'+tipo).classList.add('selected');
+  document.getElementById('parcelas-wrap').style.display = tipo === 'CREDIT_CARD' ? 'block' : 'none';
+  atualizarPreview();
+}
+
+function toggleSinal() {
+  const checked = document.getElementById('r-sinal-check').checked;
+  document.getElementById('sinal-wrap').style.display = checked ? 'block' : 'none';
+  atualizarPreview();
+}
+
+function atualizarPreview() {
+  const valorTotal = parseFloat(document.getElementById('r-valor').value) || 0;
+  const isSinal = document.getElementById('r-sinal-check').checked;
+  const valorSinal = isSinal ? (parseFloat(document.getElementById('r-valor-sinal').value) || 0) : 0;
+  const valorCobranca = (isSinal && valorSinal > 0) ? valorSinal : valorTotal;
+  const pct = parseFloat(document.getElementById('r-comissao').value) || 0;
+  const wallet = document.getElementById('r-wallet').value.trim();
+  const preview = document.getElementById('split-preview');
+  const baseLabel = document.getElementById('split-base-label');
+  if (valorCobranca > 0 && pct > 0 && wallet) {
+    const parc = valorCobranca * pct / 100;
+    preview.style.display = 'block';
+    document.getElementById('bar-voce').style.width = (100-pct)+'%';
+    document.getElementById('bar-parceiro').style.width = pct+'%';
+    document.getElementById('legend-voce').textContent = fmt(valorCobranca - parc);
+    document.getElementById('legend-parc').textContent = fmt(parc);
+    if (baseLabel) baseLabel.textContent = (isSinal && valorSinal > 0 && valorTotal > 0)
+      ? `— sobre ${fmt(valorSinal)} cobrados agora (${Math.round(valorSinal/valorTotal*100)}% do total de ${fmt(valorTotal)})` : '';
+  } else { preview.style.display = 'none'; }
+}
+
+async function gerarCobranca() {
+  const nome = document.getElementById('h-nome').value.trim();
+  const cpf = document.getElementById('h-cpf').value.replace(/\D/g,'');
+  const email = document.getElementById('h-email').value.trim();
+  const fone = document.getElementById('h-fone').value.replace(/\D/g,'');
+  const hotel = document.getElementById('r-hotel').value.trim();
+  const quarto = document.getElementById('r-quarto').value.trim();
+  const checkin = document.getElementById('r-checkin').value;
+  const checkout = document.getElementById('r-checkout').value;
+  const valorTotal = parseFloat(document.getElementById('r-valor').value);
+  const wallet = document.getElementById('r-wallet').value.trim();
+  const pct = parseFloat(document.getElementById('r-comissao').value);
+  const parcelas = parseInt(document.getElementById('r-parcelas').value) || 1;
+  const isSinal = document.getElementById('r-sinal-check').checked;
+  const valorSinal = isSinal ? parseFloat(document.getElementById('r-valor-sinal').value) : null;
+  const valorCobranca = isSinal ? valorSinal : valorTotal;
+  const errEl = document.getElementById('nova-error'); const infoEl = document.getElementById('nova-info');
+  errEl.classList.remove('show'); infoEl.classList.remove('show');
+  if (!nome) { mostrarAlerta(errEl,'Informe o nome do hóspede.'); return; }
+  if (!cpf || cpf.length < 11) { mostrarAlerta(errEl,'CPF inválido — informe 11 dígitos.'); return; }
+  if (email && !email.includes('@')) { mostrarAlerta(errEl,'E-mail inválido.'); return; }
+  if (!hotel) { mostrarAlerta(errEl,'Informe o nome do hotel.'); return; }
+  if (!checkin || !checkout) { mostrarAlerta(errEl,'Informe as datas.'); return; }
+  if (!valorTotal || valorTotal < 10) { mostrarAlerta(errEl,'Valor mínimo R$ 10,00.'); return; }
+  if (isSinal && (!valorSinal || valorSinal < 1)) { mostrarAlerta(errEl,'Informe o valor do sinal.'); return; }
+  if (isSinal && valorSinal >= valorTotal) { mostrarAlerta(errEl,'O sinal deve ser menor que o total.'); return; }
+  if (!wallet) { mostrarAlerta(errEl,'Informe o WalletId do parceiro.'); return; }
+  if (!pct || pct <= 0 || pct >= 100) { mostrarAlerta(errEl,'Percentual inválido (1 a 99).'); return; }
+  if (cobrancaEmAndamento) return;
+  cobrancaEmAndamento = true;
+  const loading = document.getElementById('loading-nova'); const btnGerar = document.getElementById('btn-gerar');
+  loading.classList.add('show'); btnGerar.disabled = true;
+  try {
+    mostrarAlerta(infoEl, 'Criando cadastro do hóspede...');
+    const clienteBody = { name: nome, cpfCnpj: cpf, notificationDisabled: true };
+    if (email) clienteBody.email = email;
+    if (fone && fone.length >= 10) clienteBody.mobilePhone = fone;
+    const cliente = await asaasAPI('POST', '/customers', clienteBody);
+    mostrarAlerta(infoEl, 'Gerando cobrança com split...');
+    const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 1);
+    const dueDateStr = dueDate.toISOString().split('T')[0];
+    const descricaoBase = `Reserva ${hotel}${quarto?' — '+quarto:''} | ${checkin} → ${checkout}`;
+    const descricao = isSinal ? `SINAL · ${descricaoBase} | Restante: ${fmt(valorTotal - valorSinal)} no check-in` : descricaoBase;
+    const cobBody = { customer: cliente.id, billingType: pagamentoSelecionado, value: valorCobranca, dueDate: dueDateStr, description: descricao, splits: [{ walletId: wallet, percentualValue: pct }] };
+    if (pagamentoSelecionado === 'CREDIT_CARD' && parcelas > 1) { cobBody.installmentCount = parcelas; cobBody.installmentValue = parseFloat((valorCobranca/parcelas).toFixed(2)); }
+    const cob = await asaasAPI('POST', '/lean/payments', cobBody);
+    infoEl.classList.remove('show'); loading.classList.remove('show');
+    const invoiceUrl = cob.invoiceUrl || cob.bankSlipUrl || '';
+    document.getElementById('result-url').textContent = invoiceUrl;
+    document.getElementById('result-valor').textContent = fmt(valorCobranca);
+    document.getElementById('result-tipo').textContent = labelPagamento(pagamentoSelecionado);
+    document.getElementById('result-comissao').textContent = pct + '% → parceiro';
+    document.getElementById('result-id').textContent = cob.id;
+    document.getElementById('result-box').classList.add('show');
+    const sinalInfoEl = document.getElementById('result-sinal-info');
+    if (isSinal) { sinalInfoEl.style.display = 'block'; sinalInfoEl.textContent = `Sinal: ${fmt(valorSinal)} cobrado agora · Restante: ${fmt(valorTotal - valorSinal)} a pagar no check-in`; }
+    else { sinalInfoEl.style.display = 'none'; }
+    const wfone = fone.replace(/\D/g,'');
+    const msgSinal = isSinal ? ` (sinal de ${fmt(valorSinal)} — restante ${fmt(valorTotal - valorSinal)} no check-in)` : '';
+    const msg = encodeURIComponent(`Olá! Segue o link para pagamento da sua reserva em *${hotel}*:\n\n${invoiceUrl}\n\nCheck-in: ${checkin} | Check-out: ${checkout}\nValor: ${fmt(valorCobranca)}${msgSinal}`);
+    document.getElementById('whatsapp-btn').href = `https://wa.me/55${wfone}?text=${msg}`;
+    const novoItem = { id: cob.id, hotel, quarto, checkin, checkout, hospede: nome, valor: valorCobranca, valorTotal, sinal: isSinal, valorRestante: isSinal ? valorTotal - valorSinal : 0, pct, wallet, tipo: pagamentoSelecionado, url: invoiceUrl, status: 'PENDING', criadoEm: new Date().toLocaleString('pt-BR') };
+    statusCache[novoItem.id] = 'PENDING';
+    const histAtual = (await storageGet('hist')) || [];
+    histAtual.unshift(novoItem);
+    await storageSet('hist', histAtual.slice(0, 50));
+    document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+    cobrancaEmAndamento = false;
+  } catch(e) {
+    loading.classList.remove('show'); btnGerar.disabled = false;
+    cobrancaEmAndamento = false; infoEl.classList.remove('show');
+    mostrarAlerta(errEl, 'Erro: ' + e.message);
+  }
+}
+
+async function atualizarStatusCobrancas() {
+  const btn = document.getElementById('btn-atualizar-status');
+  btn.disabled = true; btn.textContent = 'Atualizando...';
+  try {
+    const rawHist = await storageGet('hist') || [];
+    for (const item of rawHist) {
+      try { const cob = await asaasAPI('GET', '/payments/' + item.id); item.status = cob.status; }
+      catch(e) { console.error('Status ' + item.id + ':', e.message); }
+    }
+    await storageSet('hist', rawHist); renderHistorico(rawHist); renderFinanceiro(rawHist);
+  } catch(e) { console.error('Atualizar status:', e.message); }
+  btn.disabled = false; btn.textContent = '↻ Atualizar status';
+}
+
+async function salvarHotel() {
+  const nome = document.getElementById('novo-hotel-nome').value.trim();
+  const wallet = document.getElementById('novo-hotel-wallet').value.trim();
+  const comissao = parseFloat(document.getElementById('novo-hotel-comissao').value) || 10;
+  const obs = document.getElementById('novo-hotel-obs').value.trim();
+  if (!nome || !wallet) { alert('Informe o nome e o WalletId.'); return; }
+  const hoteis = await storageGet('hoteis') || [];
+  hoteis.unshift({ id: Date.now(), nome, wallet, comissao, obs, criadoEm: new Date().toLocaleDateString('pt-BR') });
+  await storageSet('hoteis', hoteis);
+  document.getElementById('novo-hotel-nome').value = ''; document.getElementById('novo-hotel-wallet').value = ''; document.getElementById('novo-hotel-obs').value = '';
+  renderHoteis(hoteis);
+}
+
+function usarHotel(id) {
+  const hoteis = localGet('hoteis') || [];
+  const h = hoteis.find(x => x.id === id);
+  if (!h) return;
+  document.getElementById('r-hotel').value = h.nome;
+  document.getElementById('r-wallet').value = h.wallet;
+  document.getElementById('r-comissao').value = h.comissao;
+  atualizarPreview(); mudarTab('nova');
+}
+
+async function deletarHotel(id) {
+  if (!confirm('Remover este parceiro?')) return;
+  const hoteis = (await storageGet('hoteis') || []).filter(x => x.id !== id);
+  await storageSet('hoteis', hoteis); renderHoteis(hoteis);
+}
+
+async function salvarConfig() {
+  const apiKey = document.getElementById('cfg-apikey').value.trim();
+  const env = document.getElementById('cfg-env').value;
+  const wallet = document.getElementById('cfg-wallet').value.trim();
+  const comissao = parseFloat(document.getElementById('cfg-comissao').value) || 10;
+  const novaSenha = document.getElementById('cfg-senha').value;
+  const novaSenha2 = document.getElementById('cfg-senha2').value;
+  if (novaSenha) {
+    if (novaSenha !== novaSenha2) { alert('As senhas não conferem.'); return; }
+    if (novaSenha.length < 6) { alert('A senha deve ter pelo menos 6 caracteres.'); return; }
+    try {
+      await authAPI('change-password', { token: sessao.token, password: novaSenha });
+      document.getElementById('cfg-senha').value = ''; document.getElementById('cfg-senha2').value = '';
+    } catch(e) { alert('Erro ao alterar senha: ' + e.message); return; }
+  }
+  const config = { asaasApiKey: apiKey, env, walletPadrao: wallet, comissaoPadrao: comissao };
+  await storageSet('config', config);
+  sessao.asaasApiKey = apiKey; sessao.env = env; sessao.walletPadrao = wallet; sessao.comissaoPadrao = comissao;
+  salvarSessaoLocal(sessao);
+  document.getElementById('env-badge').textContent = env === 'production' ? 'Produção' : 'Sandbox';
+  document.getElementById('env-badge').className = 'env-badge' + (env === 'production' ? ' prod' : '');
+  if (wallet) document.getElementById('r-wallet').value = wallet;
+  document.getElementById('r-comissao').value = comissao;
+  if (apiKey) document.getElementById('apikey-banner').style.display = 'none';
+  const saved = document.getElementById('config-saved');
+  saved.classList.add('show'); setTimeout(() => saved.classList.remove('show'), 3000);
+}
+
+function renderHoteis(hoteis) {
+  const el = document.getElementById('hoteis-lista');
+  if (!hoteis || hoteis.length === 0) { el.innerHTML = '<p style="font-size:13px;color:var(--bark);text-align:center;padding:20px">Nenhum parceiro cadastrado.</p>'; return; }
+  el.innerHTML = hoteis.map(h => `<div class="hotel-item"><div><div class="hotel-item-name">${h.nome}</div><div class="hotel-item-meta">Comissão: ${h.comissao}%${h.obs?' · '+h.obs:''} · ${h.criadoEm}</div></div><div style="display:flex;gap:8px"><button class="hotel-usar-btn" onclick="usarHotel(${h.id})">Usar</button><button class="hotel-del-btn" onclick="deletarHotel(${h.id})">✕</button></div></div>`).join('');
+}
+
+function mapearStatus(status) {
+  const map = { PENDING:{label:'Aguardando',css:'status-pending'}, RECEIVED:{label:'Pago',css:'status-paid'}, CONFIRMED:{label:'Pago',css:'status-paid'}, RECEIVED_IN_CASH:{label:'Pago',css:'status-paid'}, OVERDUE:{label:'Vencido',css:'status-overdue'}, REFUNDED:{label:'Estornado',css:'status-refunded'}, CHARGEBACK_REQUESTED:{label:'Chargeback',css:'status-overdue'}, CHARGEBACK_DISPUTE:{label:'Disputa',css:'status-overdue'} };
+  return map[status] || { label: 'Aguardando', css: 'status-pending' };
+}
+
+function renderHistorico(historico) {
+  const el = document.getElementById('historico-lista');
+  if (!historico || historico.length === 0) { el.innerHTML = '<div class="historico-empty"><div style="font-size:36px">🏨</div><p style="margin-top:8px;font-size:14px">Nenhuma cobrança gerada ainda.</p></div>'; return; }
+  el.innerHTML = historico.map(h => {
+    const { label, css } = mapearStatus(h.status);
+    const sinalTag = h.sinal ? `<span style="font-size:11px;background:var(--gold-light);color:var(--gold);padding:2px 8px;border-radius:10px;margin-left:6px;font-weight:600">SINAL</span>` : '';
+    const sinalMeta = h.sinal ? ` · Restante: ${fmt(h.valorRestante)} no check-in` : '';
+    return `<div class="cobranca-item"><div style="flex:1"><div class="cob-hotel">${h.hotel}${h.quarto?' — '+h.quarto:''}${sinalTag}</div><div class="cob-meta">${h.hospede} · ${h.checkin} → ${h.checkout} · ${h.pct}% comissão${sinalMeta} · ${h.criadoEm}</div></div><div class="cob-valor">${fmt(h.valor)}</div><span class="cob-status ${css}">${label}</span><button class="cob-link-btn" onclick="window.open('${h.url}','_blank')">Abrir link</button></div>`;
+  }).join('');
+}
+
+function renderFinanceiro(historico) {
+  const h = historico || [];
+  const statusPago = ['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'];
+  const pagos = h.filter(x => statusPago.includes(x.status));
+  const pendentes = h.filter(x => x.status === 'PENDING');
+  const vencidos = h.filter(x => x.status === 'OVERDUE');
+  const volume = h.reduce((s,x) => s+(x.valor||0), 0);
+  const volumePago = pagos.reduce((s,x) => s+(x.valor||0), 0);
+  const comissoesPagas = pagos.reduce((s,x) => s+((x.valor||0)*(x.pct||0)/100), 0);
+  const volumePendente = pendentes.reduce((s,x) => s+(x.valor||0), 0);
+  const volumeVencido = vencidos.reduce((s,x) => s+(x.valor||0), 0);
+  document.getElementById('fin-total').textContent = h.length;
+  document.getElementById('fin-volume').textContent = fmt(volume);
+  document.getElementById('fin-pago').textContent = fmt(volumePago);
+  document.getElementById('fin-comissao').textContent = fmt(comissoesPagas);
+  document.getElementById('fin-receita-paga').textContent = fmt(volumePago - comissoesPagas);
+  document.getElementById('fin-pendente-valor').textContent = fmt(volumePendente);
+  document.getElementById('fin-pendente-count').textContent = pendentes.length + (pendentes.length === 1 ? ' cobrança em aberto' : ' cobranças em aberto');
+  document.getElementById('fin-vencido-valor').textContent = fmt(volumeVencido);
+  document.getElementById('fin-vencido-count').textContent = vencidos.length + (vencidos.length === 1 ? ' cobrança' : ' cobranças');
+  const vencidoCard = document.getElementById('fin-vencido-card');
+  const vencidoLabel = document.getElementById('fin-vencido-label');
+  const vencidoValor = document.getElementById('fin-vencido-valor');
+  if (vencidos.length > 0) {
+    vencidoCard.style.background = '#FEE2E2'; vencidoLabel.style.color = '#991B1B';
+    vencidoLabel.textContent = '⚠️ Cobranças vencidas'; vencidoValor.style.color = '#991B1B';
+    document.getElementById('fin-vencido-count').style.color = '#991B1B';
+  } else {
+    vencidoCard.style.background = ''; vencidoLabel.style.color = '';
+    vencidoLabel.textContent = 'Cobranças vencidas'; vencidoValor.style.color = '';
+    document.getElementById('fin-vencido-count').style.color = '';
+  }
+  const listaEl = document.getElementById('fin-vencidas-lista');
+  if (vencidos.length > 0) {
+    listaEl.innerHTML = `<p style="font-size:11px;font-weight:600;color:#991B1B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;margin-top:16px">⚠️ Ação necessária — cobranças vencidas</p>${vencidos.map(v => `<div class="cobranca-item" style="border-color:#FCA5A5"><div style="flex:1"><div class="cob-hotel">${v.hotel}${v.quarto?' — '+v.quarto:''}</div><div class="cob-meta">${v.hospede} · ${v.checkin} → ${v.checkout} · ${v.criadoEm}</div></div><div class="cob-valor" style="color:#991B1B">${fmt(v.valor)}</div><span class="cob-status status-overdue">Vencida</span><button class="cob-link-btn" onclick="window.open('${v.url}','_blank')">Ver link</button></div>`).join('')}`;
+  } else { listaEl.innerHTML = ''; }
+}
+
+function mostrarToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-success';
+  toast.innerHTML = `<span>${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.remove(); }, 7000);
+}
+
+async function verificarNovosPagamentos() {
+  if (!sessao) return;
+  const hist = await storageGet('hist') || [];
+  const pendentes = hist.filter(h => !['RECEIVED','CONFIRMED','RECEIVED_IN_CASH','OVERDUE','REFUNDED'].includes(h.status));
+  if (!pendentes.length) return;
+  let atualizado = false;
+  const statusPago = ['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'];
+  for (const item of pendentes) {
+    try {
+      const cob = await asaasAPI('GET', '/payments/' + item.id);
+      const novo = cob.status; const anterior = statusCache[item.id] || item.status || 'PENDING';
+      if (statusPago.includes(novo) && !statusPago.includes(anterior)) mostrarToast(`✅ Pagamento confirmado!\n${item.hotel}${item.quarto?' — '+item.quarto:''}\nHóspede: ${item.hospede} · ${fmt(item.valor)}`);
+      statusCache[item.id] = novo; item.status = novo; atualizado = true;
+    } catch(e) {}
+  }
+  if (atualizado) {
+    await storageSet('hist', hist);
+    if (document.getElementById('tab-historico').classList.contains('active')) renderHistorico(hist);
+    if (document.getElementById('tab-financeiro').classList.contains('active')) renderFinanceiro(hist);
+  }
+}
+
+function iniciarAutoRefresh() { pararAutoRefresh(); autoRefreshTimer = setInterval(verificarNovosPagamentos, 120000); }
+function pararAutoRefresh() { if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; } }
+
+function novaCobranca() {
+  cobrancaEmAndamento = false;
+  const btnGerar = document.getElementById('btn-gerar'); if (btnGerar) btnGerar.disabled = false;
+  ['h-nome','h-cpf','h-email','h-fone','r-hotel','r-quarto','r-checkin','r-checkout','r-valor','r-valor-sinal'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('r-sinal-check').checked = false;
+  document.getElementById('sinal-wrap').style.display = 'none';
+  document.getElementById('result-box').classList.remove('show');
+  document.getElementById('result-sinal-info').style.display = 'none';
+  document.getElementById('nova-error').classList.remove('show');
+  document.getElementById('nova-info').classList.remove('show');
+  document.getElementById('split-preview').style.display = 'none';
+  selecionarPagamento('PIX');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function exportarCSV() {
+  const hist = localGet('hist') || [];
+  if (!hist.length) { alert('Nenhum dado para exportar.'); return; }
+  const cab = ['ID','Hotel','Quarto','Hóspede','Check-in','Check-out','Valor Cobrado','Valor Total Hospedagem','Sinal','Tipo Pagamento','Comissão %','Comissão R$','Sua Receita','Status','Data'];
+  const linhas = hist.map(h => {
+    const valorCobrado = h.valor || 0; const valorTotal = h.valorTotal || valorCobrado;
+    const comissaoR = valorCobrado * (h.pct || 0) / 100;
+    const { label: statusLabel } = mapearStatus(h.status);
+    return [h.id, h.hotel, h.quarto||'', h.hospede, h.checkin, h.checkout, valorCobrado.toFixed(2).replace('.',','), valorTotal.toFixed(2).replace('.',','), h.sinal ? 'Sim' : 'Não', labelPagamento(h.tipo), h.pct, comissaoR.toFixed(2).replace('.',','), (valorCobrado - comissaoR).toFixed(2).replace('.',','), statusLabel, h.criadoEm].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(';');
+  });
+  const csv = '\uFEFF' + [cab.map(c=>`"${c}"`).join(';'), ...linhas].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `staysplit_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function copiarLink() {
+  navigator.clipboard.writeText(document.getElementById('result-url').textContent).then(() => {
+    const btn = document.querySelector('.copy-btn'); btn.textContent = '✓ Copiado!';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+
+function fmt(v) { return 'R$ ' + (v||0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+function mostrarAlerta(el, msg) { el.textContent = msg; el.classList.add('show'); }
+function extrairErro(data) {
+  if (data && data.errors && data.errors.length) return data.errors.map(e => e.description).join('. ');
+  if (data && data.message) return data.message;
+  return JSON.stringify(data);
+}
+function labelPagamento(tipo) { return { PIX:'Pix', BOLETO:'Boleto', CREDIT_CARD:'Cartão', UNDEFINED:'Livre' }[tipo] || tipo; }
+</script>
+</body>
+</html>
